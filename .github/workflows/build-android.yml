@@ -44,6 +44,10 @@ jobs:
           # Save pubspec files
           cp pubspec.yaml /tmp/custom-backup/pubspec.yaml
           cp pubspec.lock /tmp/custom-backup/pubspec.lock || true
+          # Save l10n config (flutter create --overwrite detects it and fails)
+          cp l10n.yaml /tmp/custom-backup/l10n.yaml || true
+          cp -r lib/l10n /tmp/custom-backup/l10n-arb || true
+          cp -r lib/generated /tmp/custom-backup/generated || true
           # Save lib/ (flutter create --overwrite replaces all Dart files)
           cp -r lib /tmp/custom-backup/lib
           # Save android custom files
@@ -69,6 +73,8 @@ jobs:
           # Restore pubspec
           cp /tmp/custom-backup/pubspec.yaml pubspec.yaml
           cp /tmp/custom-backup/pubspec.lock pubspec.lock || true
+          # Restore l10n config
+          cp /tmp/custom-backup/l10n.yaml l10n.yaml || true
           # Restore lib/ (CRITICAL - flutter create replaces with counter demo)
           rm -rf lib
           cp -r /tmp/custom-backup/lib lib
