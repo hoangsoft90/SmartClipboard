@@ -11,25 +11,35 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// Force consistent JVM target across ALL subprojects (plugins like receive_sharing_intent set jvmTarget=17)
-subprojects {
-    afterEvaluate {
-        if (project.hasProperty('android')) {
-            project.android {
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
+
+// Force consistent JVM target across ALL subprojects AFTER everything evaluates
+gradle.projectsEvaluated {
+    rootProject.allprojects { proj ->
+        // Force Java compile options to 17
+        proj.plugins.withId("com.android.application") {
+            proj.android {
                 compileOptions {
                     sourceCompatibility JavaVersion.VERSION_17
                     targetCompatibility JavaVersion.VERSION_17
                 }
             }
         }
-        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        proj.plugins.withId("com.android.library") {
+            proj.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+        // Force Kotlin JVM target to 17
+        proj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
             kotlinOptions {
-                jvmTarget = '17'
+                jvmTarget = "17"
             }
         }
     }
-}
-
-tasks.register("clean", Delete) {
-    delete rootProject.buildDir
 }
