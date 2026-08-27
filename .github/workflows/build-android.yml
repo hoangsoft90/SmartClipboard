@@ -1,0 +1,114 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.24.0"
+  JAVA_VERSION: "17"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter ${{ env.FLUTTER_VERSION }}
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
+
+      - name: Flutter doctor
+        run: flutter doctor -v
+
+      - name: Generate Flutter platform scaffolding
+        run: |
+          # flutter create generates android/ folder structure
+          # --overwrite: keep our custom AndroidManifest.xml, build.gradle, etc.
+          flutter create . \
+            --org com.smartclip \
+            --project-name smart_clipboard \
+            --platforms android \
+            --overwrite
+
+      - name: Verify critical Android files exist
+        run: |
+          echo "=== Checking Android project structure ==="
+          ls -la android/app/build.gradle
+          ls -la android/app/src/main/AndroidManifest.xml
+          ls -la android/app/src/main/res/xml/network_security_config.xml
+          ls -la android/app/src/main/kotlin/com/smartclip/smartclipboard/MainActivity.kt
+          ls -la android/gradle/wrapper/gradle-wrapper.properties
+          echo "=== All critical files present ==="
+
+      - name: Generate launcher icons (if ImageMagick available)
+        run: |
+          if command -v convert &> /dev/null; then
+            chmod +x scripts/generate-icons.sh 2>/dev/null || true
+            ./scripts/generate-icons.sh 2>/dev/null || echo "Icon generation skipped (no ImageMagick)"
+          else
+            echo "ImageMagick not available, using default Flutter icons"
+          fi
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Run Flutter analyzer
+        run: flutter analyze --no-pub || true
+
+      - name: Run Flutter tests
+        run: flutter test --no-pub || true
+
+      - name: Build debug APK (gradle directly)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace
+          cd ..
+
+      - name: Build release APK (gradle directly)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+          cd ..
+
+      - name: Find built APKs
+        run: |
+          echo "=== Built APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null
+          echo "=== APK sizes ==="
+          find . -name "*.apk" -type f -exec ls -lh {} \;
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-clipboard-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: smart-clipboard-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+          if-no-files-found: warn

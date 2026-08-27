@@ -1,0 +1,30 @@
+name: smart_clipboard
+description: "Smart Clipboard & Text Expander — Personal Text Memory: Save Once, Paste Anywhere. 100% local-first."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+# ============================================================================
+# DEPENDENCY WHITELIST — Master Spec mục 14 (STRICT RULE 19)
+# KHÔNG tự ý thêm package khác (đặc biệt Hive, Firebase, bất kỳ BaaS nào).
+# ============================================================================
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1        # State Management chính, thống nhất toàn app
+  sqflite: ^2.3.2                 # Local SQLite Database (nguồn sự thật duy nhất)
+  path_provider: ^2.1.2           # Thư mục lưu trữ cục bộ (DB + snippets_cache.json)
+  local_auth: ^2.1.8              # Biometric App Lock (Free P0)
+  in_app_purchase: ^3.1.13        # Pro Lifetime IAP (wire-up ở Phase sau)
+  encrypt: ^5.0.3                 # AES-256-GCM cho Backup/Restore
+  crypto: ^3.0.3                  # SHA256 content_hash + HMAC cho PBKDF2
+  receive_sharing_intent: ^1.4.5  # Share Sheet Integration (fallback P0)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true

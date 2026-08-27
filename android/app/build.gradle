@@ -1,0 +1,50 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+android {
+    namespace "com.smartclip.smartclipboard"
+    compileSdk 34
+    ndkVersion flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        applicationId "com.smartclip.smartclipboard"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "0.1.0"
+
+        // networkSecurityConfig + usesCleartextTraffic referenced directly in AndroidManifest.xml
+        // Cho phép HTTP cleartext tất cả domain (xem res/xml/network_security_config.xml)
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+        }
+    }
+}
+
+flutter {
+    source "../.."
+}
+
+dependencies {
+    // local_auth uses BiometricPrompt API (available via Flutter plugin, no manual dep needed)
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network Security Config — Android 9+ (API 28) chặn HTTP mặc định.
+    Config này CHO PHÉP HTTP cleartext cho TẤT CẢ domain.
+
+    LÝ DO: Smart Clipboard nhận shared content từ Chrome/Gmail/Messenger...
+    thông qua Share Sheet, KHÔNG gọi API bên ngoài. HTTP permission chỉ dùng
+    khi user paste/share link nội bộ. KHÔNG có analytics, ads, hoặc BaaS nào
+    cần Internet (Master Spec Rule 2, 8).
+
+    ⚠️ Nếu app PHẢI gọi API thật (payment verification...), hãy thu hẹp
+    domain list thay vì allowAll。
+-->
+<network-security-config>
+    <!-- Cho phép HTTP cleartext cho tất cả domain -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
