@@ -42,18 +42,16 @@ jobs:
         run: |
           mkdir -p /tmp/custom-backup
           # Save pubspec files (flutter create --overwrite destroys them)
-          cp pubspec.yaml /tmp/custom-backup/pubspec.yaml 2>/dev/null || true
-          cp pubspec.lock /tmp/custom-backup/pubspec.lock 2>/dev/null || true
-          # Save gradle wrapper (flutter create generates old version)
-          cp android/gradle/wrapper/gradle-wrapper.properties /tmp/custom-backup/gradle-wrapper.properties 2>/dev/null || true
+          cp pubspec.yaml /tmp/custom-backup/pubspec.yaml
+          cp pubspec.lock /tmp/custom-backup/pubspec.lock || true
           # Save android custom files
-          cp android/app/src/main/AndroidManifest.xml /tmp/custom-backup/AndroidManifest.xml 2>/dev/null || true
-          cp -r android/app/src/main/res /tmp/custom-backup/res 2>/dev/null || true
-          cp -r android/app/src/main/kotlin /tmp/custom-backup/kotlin 2>/dev/null || true
-          cp android/app/build.gradle /tmp/custom-backup/app-build.gradle 2>/dev/null || true
-          cp android/build.gradle /tmp/custom-backup/root-build.gradle 2>/dev/null || true
-          cp android/settings.gradle /tmp/custom-backup/settings.gradle 2>/dev/null || true
-          cp android/gradle.properties /tmp/custom-backup/gradle.properties 2>/dev/null || true
+          cp android/app/src/main/AndroidManifest.xml /tmp/custom-backup/AndroidManifest.xml
+          cp -r android/app/src/main/res /tmp/custom-backup/res
+          cp -r android/app/src/main/kotlin /tmp/custom-backup/kotlin
+          cp android/app/build.gradle /tmp/custom-backup/app-build.gradle
+          cp android/build.gradle /tmp/custom-backup/root-build.gradle
+          cp android/settings.gradle /tmp/custom-backup/settings.gradle
+          cp android/gradle.properties /tmp/custom-backup/gradle.properties
           echo "All custom files saved"
 
       - name: Generate Flutter platform scaffolding
@@ -67,26 +65,33 @@ jobs:
       - name: Restore custom files
         run: |
           # Restore pubspec (CRITICAL - flutter create overwrites it)
-          cp /tmp/custom-backup/pubspec.yaml pubspec.yaml 2>/dev/null || true
-          cp /tmp/custom-backup/pubspec.lock pubspec.lock 2>/dev/null || true
-          # Restore gradle wrapper (needs 8.3+, flutter creates 7.6.3)
-          cp /tmp/custom-backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
+          cp /tmp/custom-backup/pubspec.yaml pubspec.yaml
+          cp /tmp/custom-backup/pubspec.lock pubspec.lock || true
           # Restore android custom files
-          cp /tmp/custom-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          cp -r /tmp/custom-backup/res/* android/app/src/main/res/ 2>/dev/null || true
-          cp -r /tmp/custom-backup/kotlin/* android/app/src/main/kotlin/ 2>/dev/null || true
-          cp /tmp/custom-backup/app-build.gradle android/app/build.gradle 2>/dev/null || true
-          cp /tmp/custom-backup/root-build.gradle android/build.gradle 2>/dev/null || true
-          cp /tmp/custom-backup/settings.gradle android/settings.gradle 2>/dev/null || true
-          cp /tmp/custom-backup/gradle.properties android/gradle.properties 2>/dev/null || true
+          cp /tmp/custom-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          cp -r /tmp/custom-backup/res/* android/app/src/main/res/
+          cp -r /tmp/custom-backup/kotlin/* android/app/src/main/kotlin/
+          cp /tmp/custom-backup/app-build.gradle android/app/build.gradle
+          cp /tmp/custom-backup/root-build.gradle android/build.gradle
+          cp /tmp/custom-backup/settings.gradle android/settings.gradle
+          cp /tmp/custom-backup/gradle.properties android/gradle.properties
           echo "All custom files restored"
+
+      - name: Force Gradle 8.3+ (flutter create generates 7.6.3)
+        run: |
+          WRAPPER_PROPS="android/gradle/wrapper/gradle-wrapper.properties"
+          # Replace any Gradle version with 8.3
+          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.3-all.zip|g' "$WRAPPER_PROPS"
+          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.3-bin.zip|g' "$WRAPPER_PROPS"
+          echo "=== Gradle wrapper after fix ==="
+          cat "$WRAPPER_PROPS"
 
       - name: Verify critical files
         run: |
+          echo "=== pubspec.yaml dependencies ==="
+          grep -E "(sqflite|riverpod|crypto|local_auth)" pubspec.yaml || echo "MISSING DEPS!"
           echo "=== Gradle wrapper ==="
           cat android/gradle/wrapper/gradle-wrapper.properties
-          echo "=== pubspec.yaml head ==="
-          head -30 pubspec.yaml
           echo "=== Android files ==="
           ls -la android/app/build.gradle android/app/src/main/AndroidManifest.xml android/app/src/main/res/xml/network_security_config.xml
 
