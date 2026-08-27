@@ -1,105 +1,108 @@
 # Smart Clipboard — Build Debug APK on GitHub Actions
 
-## Overview
-Build debug APK for Smart Clipboard Flutter app using GitHub Actions with gradle directly (no EAS, no local build).
+## Trigger
+- User says "build debug APK", "build apk", "đóng gói", "tạo APK"
 
-## Trigger Keywords
-- "build apk", "build debug", "build release", "GH Actions build"
-- "push and build", "deploy to GH Actions"
-- "smart clipboard build"
+## CÁCH THỰC HIỆN (dùng GitHub Actions, TUYỆT ĐỐI KHÔNG build local)
 
-## Repository Info
-- **Repo**: `https://github.com/hoangsoft90/SmartClipboard`
-- **Branch**: `main`
-- **Workflow**: `.github/workflows/build-android.yml`
+### Prerequisites
+- Repo: `https://github.com/hoangsoft90/SmartClipboard`
+- Token: dùng `GH_TOKEN` env var (KHÔNG hardcode trong code — GitHub secret scanning sẽ block)
 
-## Build Steps (GH Actions)
+### Workflow: `.github/workflows/build-android.yml`
 
-### 1. Push code to main branch
-```bash
-git add -A
-git commit -m "your message"
-git push origin main
+Luồng build tự động chạy khi push to `main`. Workflow thực hiện:
+1. Checkout repo
+2. Setup Java 17 + Flutter 3.24.0
+3. Save custom Android files (trước flutter create --overwrite)
+4. `flutter create --overwrite` (tạo android scaffolding)
+5. Restore custom files + force Gradle 8.3 via `sed`
+6. flutter pub get → analyze → test → build APK
+
+### Artifact download
+- Vào https://github.com/hoangsoft90/SmartClipboard/actions
+- Click build gần nhất → Artifacts section → tải debug/release APK
+
+## BÀI HỌC TỪ 10 LẦN BUILD THẤT BẠI
+
+### 1. `flutter create --overwrite` phá hủy project files
+**Vấn đề**: Lệnh này overwrite TẤT CẢ包括pubspec.yaml (mất dependencies), android/ (mất custom config), gradle-wrapper.properties (tạo version cũ 7.6.3 thay vì 8.3)
+
+**Fix**: Save custom files trước khi flutter create, restore sau đó:
+```yaml
+# Save
+cp pubspec.yaml /tmp/custom-backup/pubspec.yaml
+cp android/gradle/wrapper/gradle-wrapper.properties /tmp/custom-backup/gradle-wrapper.properties
+# ... các file custom khác
+
+# Restore
+cp /tmp/custom-backup/pubspec.yaml pubspec.yaml
+cp /tmp/custom-backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
+# ...
 ```
 
-### 2. Workflow auto-triggers on push to main
-The workflow `.github/workflows/build-android.yml` will:
-- Checkout code
-- Setup Java 17 + Flutter 3.24.0
-- Save custom Android files
-- Generate Flutter platform scaffolding (`flutter create`)
-- Restore custom Android files
-- Install dependencies
-- Build debug APK using gradle directly
+### 2. Gradle wrapper version mismatch
+**Vấn đề**: Flutter 3.24 tạo Gradle 7.6.3, nhưng AGP trong custom build.gradle cần ≥8.0 → `Minimum supported Gradle version is 8.0`
 
-### 3. Check build status
+**Fix**: Dùng `sed -i` force version SAU restore:
 ```bash
-curl -s -H "Authorization: token $GH_TOKEN" \
-  "https://api.github.com/repos/hoangsoft90/SmartClipboard/actions/runs?per_page=1"
+sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.3-all.zip|g' android/gradle/wrapper/gradle-wrapper.properties
 ```
 
-### 4. Download APK artifact
-After build completes:
-- Go to: `https://github.com/hoangsoft90/SmartClipboard/actions`
-- Click on the workflow run
-- Download `smart-clipboard-debug-apk` artifact
+### 3. shrinkResources + minifyEnabled conflict
+**Vấn đề**: Flutter Gradle Plugin tự set `shrinkResources=true`, nhưng build.gradle có `minifyEnabled=false` → `Removing unused resources requires unused code shrinking`
 
-## Important Notes
-
-### DO NOT build locally
-- User explicitly said: "Tuyệt đối ko build apk trên local"
-- Always use GitHub Actions for builds
-- This ensures consistent builds and avoids local environment issues
-
-### Gradle directly (not Flutter build)
-The workflow uses gradle directly for more control:
-```bash
-cd android
-chmod +x gradlew
-./gradlew assembleDebug --stacktrace
+**Fix**: Xóa cả hai, để Flutter Gradle Plugin tự quản:
+```groovy
+buildTypes {
+    release {
+        signingConfig signingConfigs.debug
+        // KHÔNG set minifyEnabled hay shrinkResources — Flutter tự xử lý
+    }
+}
 ```
 
-### Key Workflow Features
-- Java 17 (temurin)
-- Flutter 3.24.0 (stable)
-- Platform scaffolding via `flutter create`
-- Save/restore custom Android files
-- Network security config for HTTP cleartext
-- Adaptive icons (vector XML)
-- Upload artifacts (debug + release APK)
+### 4. Missing icon resources
+**Vấn đề**: `android:banner="@drawable/ic_launcher"` trong AndroidManifest → resource không tồn tại
 
-### Common Build Issues & Fixes
+**Fix**:
+- Xóa `android:banner` (chỉ cho TV app)
+- Tạo PNG fallback icons cho mipmap-{mdpi,hdpi,xhdpi,xxhdpi,xxxhdpi}
+- Adaptive icons (mipmap-anydpi-v26) chỉ cover API 26+
 
-1. **"Could not resolve..."** - Gradle dependency issue
-   - Fix: Check internet connectivity in workflow
-   - Fix: Add `--stacktrace` for more details
+### 5. JVM target inconsistency
+**Vấn đề**: `receive_sharing_intent` plugin force Kotlin `jvmTarget="17"`, nhưng Java set `VERSION_1_8` → `Inconsistent JVM-target compatibility`
 
-2. **"SDK location not found"**
-   - Fix: Flutter create generates local.properties
-   - Fix: Ensure `flutter create .` runs before build
+**Fix**: 
+1. Set Java + Kotlin cả hai về 17 trong app/build.gradle
+2. Dùng `gradle.projectsEvaluated` trong root build.gradle force ALL subprojects:
+```groovy
+gradle.projectsEvaluated {
+    rootProject.allprojects { proj ->
+        proj.plugins.withId("com.android.application") {
+            proj.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+        proj.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions { jvmTarget = "17" }
+        }
+    }
+}
+```
 
-3. **"AndroidManifest.xml not found"**
-   - Fix: Our custom files are in repo, flutter create overlays
-   - Fix: Verify files exist in workflow step
+### 6. afterEvaluate fails when project already evaluated
+**Vấn đề**: `evaluationDependsOn(":app")` force app evaluate trước → `afterEvaluate` chạy sau khi project đã evaluated → crash
 
-4. **"Plugin not found"**
-   - Fix: Run `flutter pub get` before build
-   - Fix: Check pubspec.yaml dependencies
+**Fix**: Dùng `gradle.projectsEvaluated` thay vì `afterEvaluate` trong subprojects
 
-5. **AGP compileSdk warning**
-   - Fix: Add `android.suppressUnsupportedCompileSdk=34` to gradle.properties
-   - Fix: Save/restore custom files after `flutter create --overwrite`
+## Checklist khi fix build errors
 
-## Manual Workflow Trigger
-If auto-trigger doesn't work:
-1. Go to: `https://github.com/hoangsoft90/SmartClipboard/actions`
-2. Click "Build Android APK" workflow
-3. Click "Run workflow" → select `main` branch → "Run workflow"
-
-## APK Output Locations
-- Debug: `android/app/build/outputs/apk/debug/app-debug.apk`
-- Release: `android/app/build/outputs/apk/release/app-release.apk`
-
-## Artifact Retention
-- Artifacts retained for 30 days
-- Download from Actions → Artifacts section
+1. ✅ Lấy log: `curl -s -L .../logs` → unzip → grep error
+2. ✅ Xác định step nào fail (Build debug APK? Install dependencies?)
+3. ✅ Đọc error message cẩn thận — thường là version mismatch hoặc missing resource
+4. ✅ Fix trong repo → push → chờ workflow auto-trigger
+5. ✅ KHÔNG build local — luôn dùng GH Actions
