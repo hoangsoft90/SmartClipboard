@@ -69,13 +69,27 @@ class AppSettings {
   /// false khi đang load từ DB lần đầu — UI hiển thị splash, tránh flash.
   final bool loaded;
 
-  const AppSettings({
-    this.expirationDays = AppLimits.expirationOptionsDays.last,
-    this.capturePaused = false,
-    this.biometricLock = false,
-    this.onboardingDone = false,
-    this.loaded = false,
+  const AppSettings._({
+    required this.expirationDays,
+    required this.capturePaused,
+    required this.biometricLock,
+    required this.onboardingDone,
+    required this.loaded,
   });
+
+  factory AppSettings({
+    int? expirationDays,
+    bool capturePaused = false,
+    bool biometricLock = false,
+    bool onboardingDone = false,
+    bool loaded = false,
+  }) => AppSettings._(
+        expirationDays: expirationDays ?? 30,
+        capturePaused: capturePaused,
+        biometricLock: biometricLock,
+        onboardingDone: onboardingDone,
+        loaded: loaded,
+      );
 
   AppSettings copyWith({
     int? expirationDays,

@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:sqflite/sqflite.dart';
+
 import '../core/constants/app_limits.dart';
 import '../core/database/app_database.dart';
 import '../core/utils/content_normalizer.dart';

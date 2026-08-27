@@ -105,7 +105,7 @@ class BackupService {
     try {
       payloadText = encrypter.decrypt(
         enc.Encrypted(ciphertext),
-        iv: enc.IV.fromBytes(nonce),
+        iv: enc.IV(nonce),
       );
     } catch (_) {
       // Sai passphrase hoặc file hỏng → GCM auth fail.

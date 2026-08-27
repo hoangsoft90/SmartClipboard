@@ -56,4 +56,31 @@ class Snippet {
 
   /// Token đầy đủ hiển thị trên UI: `;email`.
   String get fullTrigger => '$prefix$trigger';
+
+  Snippet copyWith({
+    String? id,
+    String? title,
+    String? trigger,
+    String? content,
+    String? prefix,
+    String? folderId,
+    bool? isEnabled,
+    bool? isArchived,
+    int? usageCount,
+    int? createdAt,
+    int? updatedAt,
+  }) =>
+      Snippet(
+        id: id ?? this.id,
+        title: title ?? this.title,
+        trigger: trigger ?? this.trigger,
+        content: content ?? this.content,
+        prefix: prefix ?? this.prefix,
+        folderId: folderId ?? this.folderId,
+        isEnabled: isEnabled ?? this.isEnabled,
+        isArchived: isArchived ?? this.isArchived,
+        usageCount: usageCount ?? this.usageCount,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
 }

@@ -19,7 +19,8 @@ class ProUpgradeBanner extends ConsumerWidget {
 
     return archivedAsync.maybeWhen(
       data: (count) {
-        final total = count + snippetArchived;
+        final snippetCount = snippetArchived.value ?? 0;
+        final total = count + snippetCount;
         if (total <= 0) return const SizedBox.shrink();
         return Material(
           color: Theme.of(context).colorScheme.primaryContainer,
