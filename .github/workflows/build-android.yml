@@ -38,17 +38,42 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
+      - name: Save custom Android files
+        run: |
+          # Save our custom Android files before flutter create overwrites them
+          mkdir -p /tmp/android-backup
+          cp -r android/app/src/main/AndroidManifest.xml /tmp/android-backup/ 2>/dev/null || true
+          cp -r android/app/src/main/res /tmp/android-backup/res 2>/dev/null || true
+          cp -r android/app/src/main/kotlin /tmp/android-backup/kotlin 2>/dev/null || true
+          cp android/app/build.gradle /tmp/android-backup/build.gradle 2>/dev/null || true
+          cp android/build.gradle /tmp/android-backup/root-build.gradle 2>/dev/null || true
+          cp android/settings.gradle /tmp/android-backup/settings.gradle 2>/dev/null || true
+          cp android/gradle.properties /tmp/android-backup/gradle.properties 2>/dev/null || true
+          echo "Custom Android files saved"
+
       - name: Generate Flutter platform scaffolding
         run: |
           # flutter create generates android/ folder structure
-          # --overwrite: keep our custom AndroidManifest.xml, build.gradle, etc.
+          # --overwrite: regenerate platform files (we'll restore our custom ones after)
           flutter create . \
             --org com.smartclip \
             --project-name smart_clipboard \
             --platforms android \
             --overwrite
 
-      - name: Verify critical Android files exist
+      - name: Restore custom Android files
+        run: |
+          # Restore our custom files that flutter create overwrote
+          cp /tmp/android-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          cp -r /tmp/android-backup/res/* android/app/src/main/res/ 2>/dev/null || true
+          cp -r /tmp/android-backup/kotlin/* android/app/src/main/kotlin/ 2>/dev/null || true
+          cp /tmp/android-backup/build.gradle android/app/build.gradle 2>/dev/null || true
+          cp /tmp/android-backup/root-build.gradle android/build.gradle 2>/dev/null || true
+          cp /tmp/android-backup/settings.gradle android/settings.gradle 2>/dev/null || true
+          cp /tmp/android-backup/gradle.properties android/gradle.properties 2>/dev/null || true
+          echo "Custom Android files restored"
+
+      - name: Verify critical Android files
         run: |
           echo "=== Checking Android project structure ==="
           ls -la android/app/build.gradle
