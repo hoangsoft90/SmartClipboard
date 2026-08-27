@@ -1,74 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../generated/l10n/app_localizations.dart';
 import '../../models/snippet.dart';
 import '../../state/providers.dart';
-import '../../widgets/pro_upgrade_banner.dart';
-import 'folders_screen.dart';
+import '../../widgets/save_snippet_dialog.dart';
 import 'snippet_edit_screen.dart';
 
-/// Snippet & Folder Management — P0 (mục 8: Manual Snippets & Triggers).
 class SnippetsScreen extends ConsumerWidget {
   const SnippetsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final listAsync = ref.watch(snippetListProvider);
-    final foldersAsync = ref.watch(folderListProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Snippets (Gõ tắt)'),
-        actions: [
-          IconButton(
-            tooltip: 'Quản lý folder',
-            icon: const Icon(Icons.folder_open),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const FoldersScreen())),
-          ),
-        ],
+      appBar: AppBar(title: Text(l10n.snippetsTitle)),
+      body: listAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text(l10n.clipboardLoadError)),
+        data: (items) => items.isEmpty
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(l10n.snippetsEmpty,
+                      textAlign: TextAlign.center),
+                ))
+            : ListView.separated(
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (ctx, i) =>
+                    _SnippetTile(snippet: items[i]),
+              ),
       ),
-      body: Column(children: [
-        const ProUpgradeBanner(),
-        Expanded(
-          child: listAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Lỗi tải dữ liệu')),
-            data: (snippets) => snippets.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.bolt, size: 64,
-                            color: Theme.of(context).colorScheme.outline),
-                        const SizedBox(height: 12),
-                        const Text('Chưa có snippet nào.\n'
-                            'Bấm + để tạo gõ tắt đầu tiên (;email...)'),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    itemCount: snippets.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (ctx, i) {
-                      final s = snippets[i];
-                      final folderName = foldersAsync.value
-                          ?.where((f) => f['id'] == s.folderId)
-                          .map((f) => f['name'] as String?)
-                          .firstWhere((_) => true,
-                              orElse: () => null);
-                      return _SnippetTile(
-                          snippet: s, folderName: folderName);
-                    },
-                  ),
-          ),
-        ),
-      ]),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const SnippetEditScreen())),
+        heroTag: 'snippet_fab',
+        onPressed: () {
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SnippetEditScreen()));
+        },
+        label: Text(l10n.snippetsNew),
         icon: const Icon(Icons.add),
-        label: const Text('Snippet mới'),
       ),
     );
   }
@@ -76,57 +49,62 @@ class SnippetsScreen extends ConsumerWidget {
 
 class _SnippetTile extends ConsumerWidget {
   final Snippet snippet;
-  final String? folderName;
-  const _SnippetTile({required this.snippet, this.folderName});
+  const _SnippetTile({required this.snippet});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
-      onTap: () async {
-        await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) =>
-                    SnippetEditScreen(existing: snippet)));
-        ref.read(snippetListProvider.notifier).reload();
-      },
-      title: Text(snippet.title),
-      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(snippet.fullTrigger,
-                style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color:
-                        Theme.of(context).colorScheme.onSecondaryContainer)),
-          ),
-          if (folderName != null) ...[
-            const SizedBox(width: 8),
-            Icon(Icons.folder, size: 12,
-                color: Theme.of(context).colorScheme.outline),
-            Text(' $folderName', style: Theme.of(context).textTheme.bodySmall),
-          ],
-          const SizedBox(width: 8),
-          Icon(Icons.touch_app, size: 12,
-              color: Theme.of(context).colorScheme.outline),
-          Text(' ${snippet.usageCount}',
-              style: Theme.of(context).textTheme.bodySmall),
-        ]),
-        Text(snippet.content,
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall),
-      ]),
-      trailing: Switch(
-        value: snippet.isEnabled,
-        onChanged: (_) =>
-            ref.read(snippetListProvider.notifier).toggleEnabled(snippet),
+      leading: Icon(
+        snippet.isEnabled ? Icons.bolt : Icons.bolt_outlined,
+        color: snippet.isEnabled
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.outline,
       ),
+      title: Text(snippet.title),
+      subtitle: Text(';${snippet.trigger}',
+          style: TextStyle(
+              fontFamily: 'monospace',
+              color: Theme.of(context).colorScheme.outline)),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (snippet.usageCount > 0)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Text('${snippet.usageCount}',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.outline)),
+          ),
+        PopupMenuButton<String>(
+          onSelected: (action) async {
+            final ctrl = ref.read(snippetListProvider.notifier);
+            switch (action) {
+              case 'toggle':
+                await ctrl.toggleEnabled(snippet);
+              case 'edit':
+                if (context.mounted) {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => SnippetEditScreen(
+                              snippetId: snippet.id)));
+                }
+              case 'delete':
+                await ctrl.archive(snippet.id);
+            }
+          },
+          itemBuilder: (_) => [
+            PopupMenuItem(
+                value: 'toggle',
+                child: Text(snippet.isEnabled
+                    ? l10n.snippetDisable
+                    : l10n.snippetEnable)),
+            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+            PopupMenuItem(
+                value: 'delete', child: Text(l10n.btnDelete)),
+          ],
+        ),
+      ]),
     );
   }
 }

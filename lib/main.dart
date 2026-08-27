@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/database/app_database.dart';
+import 'generated/l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/clipboard/clipboard_history_screen.dart';
@@ -63,6 +65,14 @@ class SmartClipboardApp extends ConsumerWidget {
         colorSchemeSeed: const Color(0xFF3D5AFE),
         useMaterial3: true,
       ),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: ref.watch(localeProvider),
       initialRoute: AppRoutes.root,
       onGenerateRoute: (settings) {
         // Deep-link: nếu có shared text trong route args, xử lý tại đây.

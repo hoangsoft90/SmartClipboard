@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../generated/l10n/app_localizations.dart';
 import '../services/clipboard_service.dart';
 import '../services/share_intent_service.dart';
 import '../state/providers.dart';
@@ -41,7 +42,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     super.dispose();
   }
 
-  /// Share Sheet Integration (P0): user chủ động Share text vào app.
   void _registerShareIntent() {
     final service = ShareIntentService();
     _shareIntent = service;
@@ -51,8 +51,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
   }
 
-  // Foreground Capture — STRICT RULE 1: KHÔNG background service. App chỉ đọc
-  // clipboard khi lên foreground (resume).
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -66,13 +64,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     await ref.read(clipboardListProvider.notifier).reload();
     await ref.read(archivedClipboardCountProvider.future);
 
-    // Guard:widget có thể bị unmount trong lúc await.
     if (!mounted) return;
 
+    final l10n = AppLocalizations.of(context);
     final messages = {
-      CaptureResult.saved: 'Đã lưu vào lịch sử',
-      CaptureResult.deduplicated: null, // im lặng khi trùng nội dung
-      CaptureResult.paused: null, // Incognito mode — không báo spam
+      CaptureResult.saved: l10n.clipboardSavedToHistory,
+      CaptureResult.deduplicated: null,
+      CaptureResult.paused: null,
       CaptureResult.blockedHighRisk: null,
       CaptureResult.empty: null,
     };
@@ -86,21 +84,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
   }
 
-  /// Heuristic nghi vấn CAO (score=2) → hỏi user trước khi lưu.
-  /// ⚠️ Đây CHỈ là heuristic gợi ý, không phải security guarantee (mục 5.1).
   void _showHighRiskDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Văn bản có thể nhạy cảm ⚠️'),
-        content: const Text(
-            'Nội dung trong clipboard trông giống OTP / mật khẩu / API key.\n\n'
-            'Lưu vào lịch sử? Nếu lưu, sẽ tự động xoá sau 24h.\n\n'
-            '(Phát hiện này chỉ là dự đoán heuristic, không phải bảo đảm.)'),
+        title: Text(l10n.highRiskTitle),
+        content: Text(l10n.highRiskContent),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Không lưu'),
+            child: Text(l10n.highRiskDontSave),
           ),
           FilledButton(
             onPressed: () async {
@@ -110,7 +104,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   .confirmSaveBlockedContent();
               await ref.read(clipboardListProvider.notifier).reload();
             },
-            child: const Text('Lưu & xoá sau 24h'),
+            child: Text(l10n.highRiskSaveAndDelete),
           ),
         ],
       ),
@@ -119,6 +113,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -132,14 +128,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           _lastBackPress = now;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Nhấn lại để thoát'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(l10n.btnBack),
+                duration: const Duration(seconds: 2),
               ),
             );
           }
         } else {
-          // Double-tap: thoát app.
           SystemNavigator.pop();
         }
       },
@@ -160,12 +155,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         bottomNavigationBar: NavigationBar(
           selectedIndex: _tab,
           onDestinationSelected: (i) => setState(() => _tab = i),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.history), label: 'Lịch sử'),
-            NavigationDestination(icon: Icon(Icons.bolt), label: 'Snippet'),
-            NavigationDestination(icon: Icon(Icons.auto_fix_high), label:
-                'Playground'),
-            NavigationDestination(icon: Icon(Icons.settings), label: 'Cài đặt'),
+          destinations: [
+            NavigationDestination(
+                icon: const Icon(Icons.history), label: l10n.tabClipboard),
+            NavigationDestination(
+                icon: const Icon(Icons.bolt), label: l10n.tabSnippets),
+            NavigationDestination(
+                icon: const Icon(Icons.auto_fix_high),
+                label: l10n.tabPlayground),
+            NavigationDestination(
+                icon: const Icon(Icons.settings), label: l10n.tabSettings),
           ],
         ),
       ),
@@ -173,14 +172,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 }
 
-/// Banner nhẹ nhàng mời bật keyboard nếu chưa enable (mục 7) — không spam:
-/// chỉ hiện ở Home, dismiss được.
 class _KeyboardEnableBanner extends ConsumerWidget {
   final VoidCallback onDismiss;
   const _KeyboardEnableBanner({required this.onDismiss});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final enabled = ref.watch(keyboardEnabledProvider);
     return enabled.when(
       loading: () => const SizedBox.shrink(),
@@ -191,20 +189,18 @@ class _KeyboardEnableBanner extends ConsumerWidget {
               color: Theme.of(context).colorScheme.secondaryContainer,
               child: SafeArea(
                 bottom: false,
-                child:                  ListTile(
+                child: ListTile(
                     dense: true,
                     leading: const Icon(Icons.keyboard),
-                    title: const Text(
-                        'Bật bàn phím Smart Clipboard để gõ tắt mọi nơi',
-                        style: TextStyle(fontSize: 13)),
-                    subtitle: const Text('Sắp ra mắt ở Phase 1',
-                        style: TextStyle(fontSize: 11)),
+                    title: Text(l10n.playgroundKeyboardDisabled,
+                        style: const TextStyle(fontSize: 13)),
+                    subtitle: Text(l10n.playgroundKeyboardSubtitle,
+                        style: const TextStyle(fontSize: 11)),
                     trailing: IconButton(
                       icon: const Icon(Icons.close, size: 18),
                       onPressed: onDismiss,
                     ),
-                    onTap: onDismiss, // Dismiss vì Phase 1 chưa có
-                  ),
+                    onTap: onDismiss),
               ),
             ),
     );

@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../generated/l10n/app_localizations.dart';
 import '../../models/snippet.dart';
 import '../../services/expansion_engine.dart';
 import '../../state/providers.dart';
 
-/// Tạo / sửa snippet. Trigger được validate: không rỗng, không chứa
-/// whitespace/delimiter (vì expansion chỉ xét token liền mạch — mục 4.2).
 class SnippetEditScreen extends ConsumerStatefulWidget {
+  final String? snippetId;
   final Snippet? existing;
-  const SnippetEditScreen({super.key, this.existing});
+  const SnippetEditScreen({super.key, this.snippetId, this.existing});
 
   @override
   ConsumerState<SnippetEditScreen> createState() => _SnippetEditScreenState();
@@ -21,17 +21,34 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
   late final TextEditingController _trigger;
   late final TextEditingController _content;
   String? _folderId;
+  Snippet? _loadedSnippet;
 
-  bool get _isEditing => widget.existing != null;
+  bool get _isEditing => _loadedSnippet != null;
 
   @override
   void initState() {
     super.initState();
-    final s = widget.existing;
-    _title = TextEditingController(text: s?.title ?? '');
-    _trigger = TextEditingController(text: s?.trigger ?? '');
-    _content = TextEditingController(text: s?.content ?? '');
-    _folderId = s?.folderId;
+    _loadedSnippet = widget.existing;
+    _title = TextEditingController(text: _loadedSnippet?.title ?? '');
+    _trigger = TextEditingController(text: _loadedSnippet?.trigger ?? '');
+    _content = TextEditingController(text: _loadedSnippet?.content ?? '');
+    _folderId = _loadedSnippet?.folderId;
+    _loadSnippetIfNeeded();
+  }
+
+  Future<void> _loadSnippetIfNeeded() async {
+    if (widget.snippetId != null && widget.existing == null) {
+      final snippet = await ref.read(snippetRepoProvider).getById(widget.snippetId!);
+      if (snippet != null && mounted) {
+        setState(() {
+          _loadedSnippet = snippet;
+          _title.text = snippet.title;
+          _trigger.text = snippet.trigger;
+          _content.text = snippet.content;
+          _folderId = snippet.folderId;
+        });
+      }
+    }
   }
 
   @override
@@ -45,8 +62,6 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
   String? _validateTrigger(String? v) {
     final t = v?.trim() ?? '';
     if (t.isEmpty) return 'Không được để trống';
-    // Token của expansion engine không chứa space/dấu câu — delimiter là ký tự
-    // kích hoạt nên không thể nằm trong trigger.
     if (RegExp(r'[\s.,!?]').hasMatch(t)) {
       return 'Trigger chỉ gồm chữ/số/ký hiệu liền mạch (không space, dấu câu)';
     }
@@ -63,7 +78,7 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
     final controller = ref.read(snippetListProvider.notifier);
     int archived = 0;
     if (_isEditing) {
-      await controller.save(widget.existing!.copyWith(
+      await controller.save(_loadedSnippet!.copyWith(
         title: _title.text.trim().isEmpty
             ? _trigger.text.trim()
             : _title.text.trim(),
@@ -83,41 +98,40 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
     }
 
     if (!mounted) return;
-    // Lưu message + messenger TRƯỚC khi pop (context sẽ không hợp lệ sau pop).
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context);
     final triggerText = _trigger.text.trim();
     final msg = archived > 0
-        ? 'Đã lưu. $archived snippet ít dùng nhất bị ẩn do giới hạn Free '
-            '(dữ liệu vẫn giữ nguyên — mua Pro để mở khoá).'
-        : 'Đã lưu snippet ;$triggerText';
+        ? l10n.snippetCreatedWithArchived(archived)
+        : '${l10n.snippetCreated} ;$triggerText';
     Navigator.pop(context);
     messenger.showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _delete() async {
     if (!_isEditing) return;
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xoá snippet?'),
-        content: const Text(
-            'Xoá vĩnh viễn snippet này khỏi database? '
-            '(Không thể hoàn tác)'),
+        title: Text(l10n.snippetDeleteTitle),
+        content: Text(
+            '${l10n.popupDeletePermanently} snippet này? (${l10n.btnCancel} không thể hoàn tác)'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Huỷ')),
+              child: Text(l10n.btnCancel)),
           FilledButton(
               style: FilledButton.styleFrom(
                   backgroundColor: Theme.of(ctx).colorScheme.error),
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Xoá vĩnh viễn')),
+              child: Text(l10n.popupDeletePermanently)),
         ],
       ),
     );
     if (confirmed == true && mounted) {
       await ref.read(snippetListProvider.notifier).deleteForever(
-          widget.existing!.id);
+          _loadedSnippet!.id);
       if (!mounted) return;
       Navigator.pop(context);
     }
@@ -125,7 +139,7 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
 
   bool get _hasChanges {
     if (_isEditing) {
-      final s = widget.existing!;
+      final s = _loadedSnippet!;
       return _title.text.trim() != s.title ||
           _trigger.text.trim() != s.trigger ||
           _content.text.trim() != s.content ||
@@ -138,18 +152,19 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
 
   Future<bool> _confirmDiscard() async {
     if (!_hasChanges) return true;
+    final l10n = AppLocalizations.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Thoát without saving?'),
-        content: const Text('Bạn có thay đổi chưa lưu. Thoát sẽ mất nội dung.'),
+        title: Text(l10n.snippetDiscardTitle),
+        content: Text(l10n.snippetDiscardContent),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Ở lại')),
+              child: Text(l10n.btnStay)),
           FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Thoát')),
+              child: Text(l10n.btnExit)),
         ],
       ),
     );
@@ -158,6 +173,7 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final folders = ref.watch(folderListProvider).value ?? [];
     return PopScope(
       canPop: false,
@@ -169,14 +185,13 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(_isEditing ? 'Sửa snippet' : 'Snippet mới')),
+        appBar: AppBar(title: Text(_isEditing ? 'Sửa snippet' : l10n.snippetsNew)),
         body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           TextField(
             controller: _title,
-            decoration:
-                const InputDecoration(labelText: 'Tên (vd: Email công việc)'),
+            decoration: InputDecoration(labelText: l10n.snippetTitleLabel),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -199,18 +214,18 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
           TextField(
             controller: _content,
             maxLines: 8,
-            decoration: const InputDecoration(
-                labelText: 'Nội dung sẽ được chèn',
+            decoration: InputDecoration(
+                labelText: l10n.snippetContentLabel,
                 alignLabelWithHint: true,
-                border: OutlineInputBorder()),
+                border: const OutlineInputBorder()),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
             value: _folderId,
-            decoration: const InputDecoration(labelText: 'Folder'),
+            decoration: InputDecoration(labelText: l10n.snippetFolderOptional),
             items: [
-              const DropdownMenuItem<String?>(
-                  value: null, child: Text('(Không folder)')),
+              DropdownMenuItem<String?>(
+                  value: null, child: Text('(${l10n.btnCancel})')),
               ...folders.map((f) => DropdownMenuItem<String?>(
                   value: f['id'] as String?,
                   child: Text(f['name'] as String? ?? ''))),
@@ -221,24 +236,23 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
           FilledButton.icon(
             onPressed: _save,
             icon: const Icon(Icons.save),
-            label: Text(_isEditing ? 'Lưu thay đổi' : 'Tạo snippet'),
+            label: Text(_isEditing ? l10n.btnSave : l10n.snippetCreated),
           ),
           if (_isEditing)
             TextButton.icon(
               onPressed: _delete,
               icon: Icon(Icons.delete_forever,
                   color: Theme.of(context).colorScheme.error),
-              label: Text('Xoá vĩnh viễn',
+              label: Text(l10n.popupDeletePermanently,
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
         ],
       ),
-      ), // Scaffold
-    ); // PopScope
+      ),
+    );
   }
 }
 
-/// Chặn whitespace trong trigger ngay khi gõ.
 class NoWhitespaceInputFormatter extends TextInputFormatter {
   static const delimiters = ExpansionEngine.delimiters;
   @override

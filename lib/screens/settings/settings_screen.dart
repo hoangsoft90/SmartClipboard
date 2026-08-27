@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_limits.dart';
+import '../../generated/l10n/app_localizations.dart';
 import '../../services/backup_service.dart';
 import '../../services/cache_sync_service.dart';
 import '../../services/metrics_service.dart';
@@ -17,31 +18,32 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final settings = ref.watch(appSettingsProvider);
+    final currentLocale = ref.watch(localeProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Cài đặt')),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(children: [
         // ---------------- Capture & dữ liệu ----------------
-        const _SectionHeader('Ghi lịch sử'),
+        _SectionHeader(l10n.settingsCaptureSection),
         SwitchListTile(
           secondary: const Icon(Icons.pause_circle_outline),
-          title: const Text('Tạm dừng ghi Clipboard History'),
-          subtitle: const Text(
-              'Incognito/Pause Mode — tạm dừng 1 chạm, không nghe lén nền'),
+          title: Text(l10n.settingsPauseLogging),
+          subtitle: Text(l10n.clipboardPauseSubtitle),
           value: settings.capturePaused,
           onChanged: (v) =>
               ref.read(appSettingsProvider.notifier).setCapturePaused(v),
         ),
         ListTile(
           leading: const Icon(Icons.timer_outlined),
-          title: const Text('Tự xoá lịch sử sau'),
-          subtitle: const Text('Auto-Expiration Engine (1/7/30 ngày)'),
+          title: Text(l10n.clipboardAutoDelete),
+          subtitle: Text(l10n.clipboardAutoDeleteSubtitle),
           trailing: DropdownButton<int>(
             value: settings.expirationDays,
             items: AppLimits.expirationOptionsDays
                 .map((d) => DropdownMenuItem(
-                    value: d, child: Text('$d ngày')))
+                    value: d, child: Text('$d ${l10n.clipboardAutoDelete}')))
                 .toList(),
             onChanged: (d) {
               if (d != null) {
@@ -52,55 +54,77 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
 
         // ---------------- Bảo mật ----------------
-        const _SectionHeader('Bảo mật'),
+        _SectionHeader(l10n.settingsSecuritySection),
         SwitchListTile(
           secondary: const Icon(Icons.fingerprint),
-          title: const Text('Khoá app bằng sinh trắc học'),
-          subtitle: const Text('Vân tay/khuôn mặt — miễn phí bản Free'),
+          title: Text(l10n.settingsBiometricLock),
+          subtitle: Text(l10n.settingsBiometricSubtitle),
           value: settings.biometricLock,
           onChanged: (v) async {
             if (v) {
               final canAuth =
                   await ref.read(authServiceProvider).canAuthenticate;
               if (!canAuth && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        'Thiết bị không hỗ trợ sinh trắc học hoặc chưa cài đặt')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(l10n.settingsBiometricNotSupported)));
                 return;
               }
             }
             await ref.read(appSettingsProvider.notifier).setBiometricLock(v);
           },
         ),
-        const ListTile(
-          leading: Icon(Icons.info_outline),
-          title: Text('Phát hiện dữ liệu nhạy cảm', style: TextStyle(
-              fontSize: 14)),
-          subtitle: Text(
-              '⚠️ CHỈ LÀ heuristic (regex + entropy) để GỢI Ý — KHÔNG PHẢI '
-              'bảo đảm bảo mật tuyệt đối. Entropy cao có thể chỉ là random ID.',
-              style: TextStyle(fontSize: 12)),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: Text(l10n.settingsSensitiveDetection,
+              style: const TextStyle(fontSize: 14)),
+          subtitle: Text(l10n.settingsSensitiveSubtitle,
+              style: const TextStyle(fontSize: 12)),
         ),
 
         // ---------------- Backup / Restore ----------------
-        const _SectionHeader('Sao lưu & Khôi phục'),
+        _SectionHeader(l10n.settingsBackupSection),
         ListTile(
           leading: const Icon(Icons.lock),
-          title: const Text('Export backup mã hoá (AES-256-GCM)'),
-          subtitle: const Text(
-              'Khóa derive từ passphrase của bạn qua PBKDF2 '
-              '(≥100k lần lặp). Hãy nhớ passphrase — không ai khôi phục được '
-              'nếu quên!'),
+          title: Text(l10n.settingsExportBackup),
+          subtitle: Text(l10n.settingsExportSubtitle),
           onTap: () => _exportDialog(),
         ),
         ListTile(
           leading: const Icon(Icons.restore),
-          title: const Text('Restore từ file backup'),
+          title: Text(l10n.settingsRestoreBackup),
           onTap: () => _restoreDialog(),
         ),
 
+        // ---------------- Language ----------------
+        _SectionHeader(l10n.appLanguage),
+        ListTile(
+          leading: const Icon(Icons.language),
+          title: Text(l10n.appLanguage),
+          subtitle: Text(l10n.appLanguageSubtitle),
+          trailing: DropdownButton<Locale?>(
+            value: currentLocale,
+            items: [
+              DropdownMenuItem<Locale?>(
+                value: null,
+                child: Text('🌐 System'),
+              ),
+              DropdownMenuItem<Locale?>(
+                value: const Locale('vi'),
+                child: Text(l10n.langVietnamese),
+              ),
+              DropdownMenuItem<Locale?>(
+                value: const Locale('en'),
+                child: Text(l10n.langEnglish),
+              ),
+            ],
+            onChanged: (locale) {
+              ref.read(localeProvider.notifier).setLocale(locale);
+            },
+          ),
+        ),
+
         // ---------------- Metrics local-only ----------------
-        const _SectionHeader('Thống kê (chỉ lưu trên máy)'),
+        _SectionHeader(l10n.settingsStatsSection),
         _MetricsSummary(onRefresh: () => setState(() {})),
 
         const SizedBox(height: 16),
@@ -109,42 +133,39 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Future<void> _exportDialog() async {
+    final l10n = AppLocalizations.of(context);
     final passController = TextEditingController();
     final confirmed = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Nhập passphrase cho backup'),
+        title: Text(l10n.exportDialogPassphraseTitle),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: passController,
             obscureText: true,
             autofocus: true,
-            decoration:
-                const InputDecoration(labelText: 'Passphrase (tự chọn)'),
+            decoration: InputDecoration(labelText: l10n.exportDialogPassphraseLabel),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Key mã hoá được tạo từ passphrase này. QUÊN PASSPHRASE = '
-            'KHÔNG THỂ RESTORE. Salt + nonce ngẫu nhiên được lưu trong file.',
-            style: TextStyle(fontSize: 12),
+          Text(
+            l10n.exportDialogPassphraseWarning,
+            style: const TextStyle(fontSize: 12),
           ),
         ]),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Huỷ')),
+              onPressed: () => Navigator.pop(ctx), child: Text(l10n.btnCancel)),
           FilledButton(
             onPressed: () {
               if (passController.text.length < 8) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(
-                    content: Text('Passphrase phải có ít nhất 8 ký tự.'),
-                  ),
+                  SnackBar(content: Text(l10n.exportPassphraseTooShort)),
                 );
                 return;
               }
               Navigator.pop(ctx, passController.text);
             },
-            child: const Text('Export'),
+            child: Text(l10n.btnExport),
           ),
         ],
       ),
@@ -156,58 +177,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     try {
       final path = await ref.read(backupServiceProvider).exportTo(confirmed);
       messenger.showSnackBar(SnackBar(
-          content: Text('Đã export: $path'), duration:
-              const Duration(seconds: 6)));
+          content: Text(l10n.exportSuccess(path)),
+          duration: const Duration(seconds: 6)));
     } on BackupException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
-      messenger.showSnackBar(const SnackBar(
-          content: Text('Export thất bại. Vui lòng thử lại.')));
+      messenger.showSnackBar(SnackBar(content: Text(l10n.exportFailed)));
     }
   }
 
   Future<void> _restoreDialog() async {
+    final l10n = AppLocalizations.of(context);
     final passController = TextEditingController();
     final pathController = TextEditingController();
     showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Restore từ backup'),
+        title: Text(l10n.restoreDialogTitle),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: pathController,
-            decoration: const InputDecoration(
-                labelText: 'Đường dẫn file .scbak',
-                helperText:
-                    'Vd: /data/user/0/.../files/smart_clipboard_backup_....scbak'),
+            decoration: InputDecoration(
+                labelText: l10n.restoreDialogPathLabel,
+                helperText: l10n.restoreDialogPathHelper),
           ),
           TextField(
             controller: passController,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Passphrase'),
+            decoration: InputDecoration(labelText: l10n.restoreDialogPassphraseLabel),
           ),
           const SizedBox(height: 8),
-          const Text(
-              '⚠️ Restore sẽ THAY THẾ toàn bộ data hiện tại trong app.',
-              style: TextStyle(fontSize: 12)),
+          Text(l10n.restoreDialogWarning,
+              style: const TextStyle(fontSize: 12)),
         ]),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Huỷ')),
+              onPressed: () => Navigator.pop(ctx), child: Text(l10n.btnCancel)),
           FilledButton(
             onPressed: () {
               if (pathController.text.trim().isEmpty) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
-                  const SnackBar(
-                    content: Text('Vui lòng nhập đường dẫn file backup.'),
-                  ),
+                  SnackBar(content: Text(l10n.restorePathEmpty)),
                 );
                 return;
               }
               Navigator.pop(ctx,
                   [pathController.text.trim(), passController.text]);
             },
-            child: const Text('Restore'),
+            child: Text(l10n.btnRestore),
           ),
         ],
       ),
@@ -221,18 +238,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         await ref
             .read(backupServiceProvider)
             .restoreFrom(parts[0], parts[1]);
-        // STRICT RULE 13: sau restore (= CRUD hàng loạt) phải regenerate cache.
         await ref.read(cacheSyncProvider).regenerateSnippetCache();
         await ref.read(clipboardListProvider.notifier).reload();
         await ref.read(snippetListProvider.notifier).reload();
         await ref.read(folderListProvider.notifier).reload();
-        messenger.showSnackBar(
-            const SnackBar(content: Text('Restore thành công!')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.restoreSuccess)));
       } on BackupException catch (e) {
         messenger.showSnackBar(SnackBar(content: Text(e.message)));
       } catch (_) {
-        messenger.showSnackBar(const SnackBar(
-            content: Text('Restore thất bại. Kiểm tra lại file/passphrase.')));
+        messenger.showSnackBar(SnackBar(content: Text(l10n.restoreFailed)));
       }
     });
   }
@@ -255,14 +269,13 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Local-only metrics summary (mục 10) — hiển thị số liệu vô hại, không chứa
-/// bất kỳ nội dung text nào của user (STRICT RULE 7).
 class _MetricsSummary extends ConsumerWidget {
   final VoidCallback? onRefresh;
   const _MetricsSummary({this.onRefresh});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return FutureBuilder<Map<String, int>>(
       future: ref.read(metricsProvider).summary(),
       builder: (ctx, snap) {
@@ -275,23 +288,20 @@ class _MetricsSummary extends ConsumerWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Wrap(spacing: 8, runSpacing: 8, children: [
-                  _chip(ctx, 'Snippets đã tạo',
+                  _chip(ctx, l10n.statsSnippetsCreated,
                       '${s[MetricsService.kSnippetsCreated] ?? 0}'),
-                  _chip(ctx, 'Lần mở rộng', '$expansions'),
-                  _chip(ctx, 'Clipboard đã lưu',
+                  _chip(ctx, l10n.statsExpansions, '$expansions'),
+                  _chip(ctx, l10n.statsClipboardSaved,
                       '${s[MetricsService.kClipboardItemsSaved] ?? 0}'),
-                  _chip(ctx, 'Clipboard tái dùng',
+                  _chip(ctx, l10n.statsClipboardReused,
                       '${s[MetricsService.kClipboardItemsReused] ?? 0}'),
-                  _chip(ctx, 'Playground expansions',
+                  _chip(ctx, l10n.statsPlaygroundExpansions,
                       '${s[MetricsService.kPlaygroundExpansions] ?? 0}'),
-                  _chip(ctx, 'Ngày active', '$days'),
+                  _chip(ctx, l10n.statsActiveDays, '$days'),
                 ]),
                 const SizedBox(height: 8),
-                Text(
-                  'Mở rộng / ngày active: $perDay\n'
-                  '≥ 1 → thói quen dùng Text Expander đã hình thành '
-                  '(tiêu chí Go Phase 1 — mục 10 spec)',
-                  style: Theme.of(context).textTheme.bodySmall),
+                Text(l10n.statsPerDay(perDay),
+                    style: Theme.of(context).textTheme.bodySmall),
               ]),
         );
       },

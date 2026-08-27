@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -338,6 +339,36 @@ final keyboardEnabledProvider = FutureProvider<bool>(
 /// Pro status stub — wire-up `in_app_purchase` ở phase IAP (không thuộc P0).
 /// false = bản Free, áp dụng AppLimits (soft-delete Rule 17).
 final proStatusProvider = StateProvider<bool>((_) => false);
+
+/// Locale provider — persists language choice in app_meta.
+/// Default: follow system locale. User can override in Settings.
+final localeProvider = StateNotifierProvider<LocaleController, Locale?>((ref) {
+  return LocaleController(ref.watch(metaDaoProvider));
+});
+
+class LocaleController extends StateNotifier<Locale?> {
+  final MetaDao _meta;
+  LocaleController(this._meta) : super(null) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final code = await _meta.get('app_language');
+    if (code != null && code.isNotEmpty) {
+      state = Locale(code);
+    }
+    // null = follow system locale
+  }
+
+  Future<void> setLocale(Locale? locale) async {
+    state = locale;
+    if (locale == null) {
+      await _meta.set('app_language', '');
+    } else {
+      await _meta.set('app_language', locale.languageCode);
+    }
+  }
+}
 
 /// Helper dùng chung: hash nội dung (để kiểm tra dedup ngoài repository nếu cần).
 String hashOf(String raw) => contentHash(raw);

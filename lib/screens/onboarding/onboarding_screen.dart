@@ -1,18 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../generated/l10n/app_localizations.dart';
 import '../../state/providers.dart';
 
-/// Onboarding flow kép — Master Spec mục 7.
-///
-/// Màn 1: Giới thiệu "Personal Text Memory" + cam kết 100% Privacy.
-/// Màn 2: Hướng dẫn bật System Keyboard (Direct Intent Settings qua
-///        MethodChannel — Phase 0 là stub, Kotlin thuộc Phase 1).
-/// Màn 3: Hướng dẫn battery optimization theo hãng máy phổ biến tại VN
-///        (MIUI/ColorOS/One UI) — STRICT RULE (mục 7.1): phải hiển thị rõ,
-///        không block nếu user bỏ qua.
-/// Màn 4: Share Sheet fallback — biến hạn chế "không đọc clipboard nền"
-///        thành lợi thế chủ động. KHÔNG dùng Floating Widget trong MVP.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -32,11 +23,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        // Ngăn user back ra khỏi onboarding — phải finish hoặc skip.
-        // Nếu ở page đầu tiên, cho phép exit (user thực sự muốn thoát).
         if (didPop || _page == 0) {
           _finish(context);
         }
@@ -64,7 +55,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: [
                   TextButton(
                     onPressed: () => _go(context, last: true),
-                    child: const Text('Bỏ qua'),
+                    child: Text(l10n.btnSkip),
                   ),
                   FilledButton(
                     onPressed: () =>
@@ -72,7 +63,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             duration: const Duration(milliseconds: 250),
                             curve: Curves.easeOut)
                         : _finish(context),
-                    child: Text(_page < 3 ? 'Tiếp' : 'Bắt đầu dùng'),
+                    child: Text(_page < 3 ? l10n.btnNext : l10n.onboardingGetStarted),
                   ),
                 ],
               ),
@@ -80,8 +71,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
       ),
-      ), // Scaffold
-    ); // PopScope
+      ),
+    );
   }
 
   void _go(BuildContext context, {bool last = false}) {
@@ -104,6 +95,7 @@ class _IntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.all(32),
@@ -113,24 +105,23 @@ class _IntroPage extends StatelessWidget {
           Icon(Icons.auto_stories,
               size: 96, color: theme.colorScheme.primary),
           const SizedBox(height: 24),
-          Text('Personal Text Memory',
+          Text(l10n.onboardingTitle1,
               style: theme.textTheme.headlineSmall,
               textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          const Text('Lưu một lần. Dán ở bất cứ đâu.',
-              style: TextStyle(fontSize: 16)),
+          Text(l10n.onboardingSubtitle1,
+              style: const TextStyle(fontSize: 16)),
           const SizedBox(height: 24),
-          const ListTile(
-            leading: Icon(Icons.offline_bolt),
-            title: Text('100% Local-first'),
-            subtitle: Text(
+          ListTile(
+            leading: const Icon(Icons.offline_bolt),
+            title: const Text('100% Local-first'),
+            subtitle: const Text(
                 'Không server, không cloud, không gửi nội dung ra ngoài thiết bị.'),
           ),
-          const ListTile(
-            leading: Icon(Icons.gavel),
-            title: Text('Gõ tắt mọi nơi'),
-            subtitle: Text('Tạo snippet ;email → gõ ;email và dấu cách → '
-                'được thay bằng địa chỉ đầy đủ.'),
+          ListTile(
+            leading: const Icon(Icons.gavel),
+            title: Text(l10n.onboardingTitle2),
+            subtitle: Text(l10n.onboardingSubtitle2),
           ),
         ],
       ),
@@ -146,16 +137,9 @@ class _KeyboardPage extends ConsumerStatefulWidget {
 }
 
 class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
-  bool? _enabled;
-
-  Future<void> _checkStatus() async {
-    final enabled =
-        await ref.read(nativeBridgeProvider).isKeyboardEnabled();
-    if (mounted) setState(() => _enabled = enabled);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -165,40 +149,35 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
           Icon(Icons.keyboard_alt_outlined,
               size: 96, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 24),
-          Text('Bật bàn phím Smart Clipboard',
+          Text(l10n.onboardingTitle4,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          const Text(
-            'Để gõ tắt ở MỌI ứng dụng, hãy:\n'
-            '1. Bấm "Enable Keyboard" bên dưới\n'
-            '2. Bật công tắc của Smart Clipboard trong Cài đặt hệ thống\n'
-            '3. Chọn Smart Clipboard làm bàn phím mặc định',
+          Text(
+            l10n.onboardingSubtitle4,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          const Card(
+          Card(
             color: Colors.amber,
             child: Padding(
-              padding: EdgeInsets.all(12),
+              padding: const EdgeInsets.all(12),
               child: Text(
-                '🔧 Tính năng bàn phím sẽ có ở Phase 1.\n'
-                'Hiện tại bạn vẫn có thể dùng Clipboard History, '
-                'Snippets, và Playground.',
+                l10n.playgroundKeyboardSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13),
+                style: const TextStyle(fontSize: 13),
               ),
             ),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: null, // Disabled — Phase 1 feature
+            onPressed: null,
             icon: const Icon(Icons.settings),
-            label: const Text('Bật bàn phím (Phase 1)'),
+            label: Text(l10n.onboardingEnableKeyboard),
           ),
-          const Text('Tính năng này sẽ khả dụng trong bản cập nhật tới',
+          Text(l10n.onboardingSubtitle4,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
         ],
       ),
     );
@@ -210,6 +189,7 @@ class _OemBatteryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -231,8 +211,8 @@ class _OemBatteryPage extends StatelessWidget {
             '• MIUI: thêm app vào danh sách bảo vệ khởi động tự động',
           ),
           const SizedBox(height: 8),
-          const Text('Bạn có thể bỏ qua bước này và quay lại sau.',
-              style: TextStyle(fontStyle: FontStyle.italic)),
+          Text(l10n.onboardingSkipHint,
+              style: const TextStyle(fontStyle: FontStyle.italic)),
         ],
       ),
     );
@@ -244,6 +224,7 @@ class _ShareSheetPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -252,15 +233,12 @@ class _ShareSheetPage extends StatelessWidget {
           Icon(Icons.share,
               size: 96, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 24),
-          Text('Chia sẻ vào app bất cứ lúc nào',
+          Text(l10n.onboardingTitle3,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          const Text(
-            'Thấy text hữu ích trên web/tin nhắn? Bấm Share → chọn '
-            '"Smart Clipboard" để lưu thành lịch sử hoặc snippet.\n\n'
-            'App không nghe lén nền — bạn chủ động gửi text vào app. '
-            'Đó chính là cách chúng tôi giữ sự riêng tư của bạn.',
+          Text(
+            l10n.onboardingSubtitle3,
             textAlign: TextAlign.center,
           ),
         ],

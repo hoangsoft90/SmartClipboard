@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../generated/l10n/app_localizations.dart';
 import '../../models/clipboard_item.dart';
 import '../../services/privacy_service.dart';
 import '../../state/providers.dart';
@@ -8,25 +9,23 @@ import '../../widgets/privacy_banner.dart';
 import '../../widgets/pro_upgrade_banner.dart';
 import '../../widgets/save_snippet_dialog.dart';
 
-/// Clipboard History UI — P0.
-/// Foreground capture nằm ở HomeScreen (resume); Incognito toggle ở AppBar.
 class ClipboardHistoryScreen extends ConsumerWidget {
   const ClipboardHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final listAsync = ref.watch(clipboardListProvider);
     final settings = ref.watch(appSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lịch sử Clipboard'),
+        title: Text(l10n.clipboardHistoryTitle),
         actions: [
-          // Incognito / Pause Mode — P0 bắt buộc (mục 5.2): toggle 1 chạm.
           IconButton(
             tooltip: settings.capturePaused
-                ? 'Bỏ tạm dừng ghi lịch sử'
-                : 'Tạm dừng ghi lịch sử (Incognito)',
+                ? l10n.clipboardPauseResumeTooltip
+                : l10n.clipboardPauseTooltip,
             icon: Icon(settings.capturePaused
                 ? Icons.pause_circle
                 : Icons.pause_circle_outline),
@@ -40,23 +39,21 @@ class ClipboardHistoryScreen extends ConsumerWidget {
         if (settings.capturePaused)
           Material(
             color: Theme.of(context).colorScheme.errorContainer,
-            child: const ListTile(
+            child: ListTile(
               dense: true,
-              leading: Icon(Icons.visibility_off),
-              title: Text('ĐANG TẠM DỪNG ghi lịch sử clipboard',
-                  style: TextStyle(fontSize: 13)),
+              leading: const Icon(Icons.visibility_off),
+              title: Text(l10n.clipboardPaused,
+                  style: const TextStyle(fontSize: 13)),
             ),
           ),
         const ProUpgradeBanner(),
         Expanded(
           child: listAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Lỗi tải dữ liệu')),
+            error: (e, _) => Center(child: Text(l10n.clipboardLoadError)),
             data: (items) => items.isEmpty
-                ? const Center(
-                    child: Text(
-                        'Chưa có nội dung nào.\nSwitch sang app khác rồi quay lại '
-                        'để lưu clipboard.',
+                ? Center(
+                    child: Text(l10n.clipboardEmpty,
                         textAlign: TextAlign.center))
                 : RefreshIndicator(
                     onRefresh: () async {
@@ -80,18 +77,20 @@ class _ItemTile extends ConsumerWidget {
   final ClipboardItem item;
   const _ItemTile({required this.item});
 
-  String _timeAgo() {
+  String _timeAgo(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final diff =
         DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(
             item.updatedAt));
-    if (diff.inMinutes < 1) return 'vừa xong';
-    if (diff.inHours < 1) return '${diff.inMinutes} phút trước';
-    if (diff.inDays < 1) return '${diff.inHours} giờ trước';
-    return '${diff.inDays} ngày trước';
+    if (diff.inMinutes < 1) return l10n.timeAgoJustNow;
+    if (diff.inHours < 1) return l10n.timeAgoMinutes(diff.inMinutes);
+    if (diff.inDays < 1) return l10n.timeAgoHours(diff.inHours);
+    return l10n.timeAgoDays(diff.inDays);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return ListTile(
       onTap: () async {
@@ -99,7 +98,7 @@ class _ItemTile extends ConsumerWidget {
         await ref.read(clipboardListProvider.notifier).reload();
         if (context.mounted) {
           ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text('Đã copy')));
+              .showSnackBar(SnackBar(content: Text(l10n.clipboardCopied)));
         }
       },
       title: Text(
@@ -108,7 +107,7 @@ class _ItemTile extends ConsumerWidget {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Row(children: [
-        Text(_timeAgo(), style: theme.textTheme.bodySmall),
+        Text(_timeAgo(context), style: theme.textTheme.bodySmall),
         if (item.copyCount > 1) ...[
           const SizedBox(width: 8),
           Icon(Icons.repeat, size: 12, color: theme.colorScheme.outline),
@@ -139,7 +138,6 @@ class _ItemTile extends ConsumerWidget {
             case 'archive':
               await controller.archiveItem(item.id);
             case 'delete':
-              // Xoá vật lý CHỈ khi user chủ động chọn.
               await controller.deleteForever(item.id);
             case 'expiration':
               await _suggest24hExpiry(ref);
@@ -148,26 +146,25 @@ class _ItemTile extends ConsumerWidget {
         itemBuilder: (_) => [
           PopupMenuItem(
             value: 'pin',
-            child: Text(item.isPinned ? 'Bỏ ghim' : 'Ghim'),
+            child: Text(item.isPinned ? l10n.popupUnpin : l10n.popupPin),
           ),
           PopupMenuItem(
             value: 'favorite',
-            child: Text(item.isFavorite ? 'Bỏ yêu thích' : 'Yêu thích'),
+            child: Text(item.isFavorite ? l10n.popupUnfavorite : l10n.popupFavorite),
           ),
-          const PopupMenuItem(value: 'copy', child: Text('Copy lại')),
-          const PopupMenuItem(value: 'snippet', child: Text('Lưu thành Snippet')),
+          PopupMenuItem(value: 'copy', child: Text(l10n.popupCopyAgain)),
+          PopupMenuItem(value: 'snippet', child: Text(l10n.popupSaveAsSnippet)),
           if (item.privacyRiskScore >= 1)
-            const PopupMenuItem(
-                value: 'expiration', child: Text('Xoá sau 24h ⚠️ heuristic')),
-          const PopupMenuItem(value: 'archive', child: Text('Ẩn khỏi lịch sử')),
-          const PopupMenuItem(value: 'delete', child: Text('Xoá vĩnh viễn')),
+            PopupMenuItem(
+                value: 'expiration', child: Text(l10n.popupDeleteAfter24h)),
+          PopupMenuItem(value: 'archive', child: Text(l10n.popupHideFromHistory)),
+          PopupMenuItem(value: 'delete', child: Text(l10n.popupDeletePermanently)),
         ],
       ),
     );
   }
 
   Future<void> _suggest24hExpiry(WidgetRef ref) async {
-    // Banner mục 5.1: gợi ý tự xoá sau 24h cho item nghi vấn nhạy cảm.
     await ref.read(clipboardRepoProvider).setExpiry(
         item.id, PrivacyService.suggestedExpiryForSuspect(
             DateTime.now().millisecondsSinceEpoch));
@@ -175,8 +172,6 @@ class _ItemTile extends ConsumerWidget {
   }
 }
 
-/// Badge hiển thị privacy_risk_score — HEURISTIC ONLY (mục 5.1, Rule 9).
-/// Tooltip luôn kèm disclaimer "dự đoán heuristic".
 class _RiskBadge extends StatelessWidget {
   final int score;
   const _RiskBadge({required this.score});

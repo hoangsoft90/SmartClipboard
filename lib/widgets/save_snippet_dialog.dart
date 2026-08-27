@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../generated/l10n/app_localizations.dart';
 import '../state/providers.dart';
 
-/// Dialog tạo snippet nhanh (dùng cho Share Sheet fallback và
-/// "Save as Snippet" từ lịch sử clipboard).
 Future<void> showSaveSnippetDialog(
   BuildContext context,
   WidgetRef ref, {
   String? initialContent,
 }) async {
+  final l10n = AppLocalizations.of(context);
   final titleController = TextEditingController();
   final triggerController = TextEditingController();
   final contentController =
@@ -29,32 +29,30 @@ Future<void> showSaveSnippetDialog(
     context: context,
     builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
       return AlertDialog(
-        title: const Text('Tạo snippet mới'),
+        title: Text(l10n.snippetNewTitle),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(
-                    labelText: 'Tên (vd: Email công việc)'),
+                decoration: InputDecoration(labelText: l10n.snippetTitleLabel),
               ),
               TextField(
                 controller: triggerController,
-                decoration: const InputDecoration(
-                    labelText: 'Trigger không dấu cách (vd: email)',
+                decoration: InputDecoration(
+                    labelText: l10n.snippetTriggerLabel,
                     prefixText: ';'),
               ),
               TextField(
                 controller: contentController,
                 maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Nội dung'),
+                decoration: InputDecoration(labelText: l10n.snippetContentLabel),
               ),
               if (folders.isNotEmpty)
                 DropdownButtonFormField<String>(
                   value: folderId,
-                  decoration:
-                      const InputDecoration(labelText: 'Folder (tuỳ chọn)'),
+                  decoration: InputDecoration(labelText: l10n.snippetFolderOptional),
                   items: folders
                       .map((f) => DropdownMenuItem(
                           value: f['id'] as String?,
@@ -68,7 +66,7 @@ Future<void> showSaveSnippetDialog(
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Huỷ')),
+              child: Text(l10n.btnCancel)),
           FilledButton(
             onPressed: () async {
               final trigger = triggerController.text.trim();
@@ -89,12 +87,11 @@ Future<void> showSaveSnippetDialog(
               Navigator.pop(ctx, true);
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(archived > 0
-                    ? 'Đã tạo snippet. $archived snippet cũ bị ẩn do giới hạn '
-                        'Free — mua Pro để mở khoá.'
-                    : 'Đã tạo snippet ;$trigger'),
+                    ? l10n.snippetCreatedWithArchived(archived)
+                    : '${l10n.snippetCreated} ;$trigger'),
               ));
             },
-            child: const Text('Lưu'),
+            child: Text(l10n.btnSave),
           ),
         ],
       );
@@ -103,32 +100,32 @@ Future<void> showSaveSnippetDialog(
   return;
 }
 
-/// Nhận text được share từ system sharesheet → chọn lưu Clipboard hay Snippet.
 Future<void> showSaveSharedTextDialog(
     BuildContext context, WidgetRef ref, String text) async {
+  final l10n = AppLocalizations.of(context);
   await showModalBottomSheet<void>(
     context: context,
     builder: (ctx) => SafeArea(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Text('Nhận text được chia sẻ (${text.length} ký tự)',
+          child: Text(l10n.shareReceived(text.length),
               style: const TextStyle(fontWeight: FontWeight.bold)),
         ),
         ListTile(
           leading: const Icon(Icons.history),
-          title: const Text('Lưu vào lịch sử Clipboard'),
+          title: Text(l10n.shareSaveToHistory),
           onTap: () async {
             Navigator.pop(ctx);
             await ref.read(clipboardServiceProvider).captureFromSystem(
-                  forceSave: true, // user chủ động gửi — bỏ qua pause mode?
+                  forceSave: true,
                 );
             await ref.read(clipboardListProvider.notifier).reload();
           },
         ),
         ListTile(
           leading: const Icon(Icons.bolt),
-          title: const Text('Tạo Snippet với trigger'),
+          title: Text(l10n.shareCreateSnippet),
           onTap: () {
             Navigator.pop(ctx);
             showSaveSnippetDialog(context, ref, initialContent: text);

@@ -13,6 +13,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   flutter_riverpod: ^2.5.1        # State Management chính, thống nhất toàn app
   sqflite: ^2.3.2                 # Local SQLite Database (nguồn sự thật duy nhất)
   path_provider: ^2.1.2           # Thư mục lưu trữ cục bộ (DB + snippets_cache.json)

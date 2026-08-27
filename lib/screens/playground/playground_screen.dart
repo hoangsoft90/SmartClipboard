@@ -3,15 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/constants/app_limits.dart';
+import '../../generated/l10n/app_localizations.dart';
 import '../../services/expansion_engine.dart';
 import '../../services/metrics_service.dart';
 import '../../state/providers.dart';
 
-/// Expander Playground — P0 BẮT BUỘC (Master Spec mục 6, STRICT RULE 20).
-///
-/// User gõ `;email` + Space trong text field lớn → thấy expansion NGAY LẬP
-/// TỨC, không cần cài keyboard. Đây là công cụ onboarding mạnh nhất và công cụ
-/// đo product-market fit sớm nhất (metric `playground_expansions` — mục 10).
 class PlaygroundScreen extends ConsumerStatefulWidget {
   const PlaygroundScreen({super.key});
 
@@ -35,8 +31,6 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
     final outcome = engine.processInput(text);
     if (!outcome.changed) return;
 
-    // Thay thế buffer + đưa caret về cuối. Dart String ops là an toàn UTF-16
-    // code unit (STRICT RULE 15 áp dụng cho native IME — Phase 1).
     _controller.value = TextEditingValue(
       text: outcome.outputText,
       selection: TextSelection.collapsed(offset: outcome.outputText.length),
@@ -66,13 +60,14 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final snippetCount =
         ref.watch(snippetListProvider).value?.where((s) => s.isEnabled).length ??
             0;
     final keyboardEnabled = ref.watch(keyboardEnabledProvider).value ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('✨ Smart Expander Playground')),
+      appBar: AppBar(title: Text(l10n.playgroundTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -81,11 +76,10 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
             maxLines: 8,
             onChanged: _onChanged,
             decoration: InputDecoration(
-              hintText: 'Nhập trigger (vd: ${snippetCount > 0 ? ";trigger" : ";email"}) rồi gõ dấu cách...',
+              hintText: l10n.playgroundHintText(
+                  snippetCount > 0 ? ";trigger" : ";email"),
               border: const OutlineInputBorder(),
-              helperText:
-                  'Mẹo: ;;email → xuất ra ;email (escape). Trigger chỉ mở rộng '
-                  'khi theo sau bởi Space/Enter/dấu câu.',
+              helperText: l10n.playgroundHelperText,
               alignLabelWithHint: true,
             ),
           ),
@@ -106,21 +100,21 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                          'Đã mở rộng $_lastExpandedTrigger',
+                          l10n.playgroundExpanded(_lastExpandedTrigger!),
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context)
                                   .colorScheme.onSecondaryContainer)),
                     ),
                     IconButton(
-                      tooltip: 'Copy kết quả',
+                      tooltip: l10n.playgroundCopyResult,
                       icon: const Icon(Icons.copy, size: 18),
                       onPressed: () async {
                         await Clipboard.setData(ClipboardData(
                             text: _lastExpandedContent ?? ''));
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Đã copy')));
+                            SnackBar(content: Text(l10n.playgroundCopied)));
                       },
                     ),
                   ]),
@@ -137,38 +131,32 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                   ? Icons.check_circle
                   : Icons.keyboard_alt_outlined),
               title: Text(keyboardEnabled
-                  ? 'Bàn phím Smart Clipboard đã bật'
-                  : '💡 Bật keyboard Smart Clipboard để dùng ngay trên mọi ứng '
-                      'dụng!'),
-              subtitle: keyboardEnabled ? null : const Text(
-                  '🔧 Tính năng sẽ có ở Phase 1 — hiện tại chỉ dùng được '
-                  'trong Playground',
-                  style: TextStyle(fontSize: 12)),
+                  ? l10n.playgroundKeyboardEnabled
+                  : l10n.playgroundKeyboardDisabled),
+              subtitle: keyboardEnabled ? null : Text(
+                  l10n.playgroundKeyboardSubtitle,
+                  style: const TextStyle(fontSize: 12)),
               trailing: keyboardEnabled
                   ? null
                   : TextButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Bàn phím Smart Clipboard chưa khả '
-                                'dụng ở Phase 0. Đang phát triển!'),
-                            duration: Duration(seconds: 3),
+                          SnackBar(
+                            content: Text(l10n.playgroundKeyboardPhase0),
+                            duration: const Duration(seconds: 3),
                           ),
                         );
                       },
-                      child: const Text('Bật'),
+                      child: Text(l10n.btnEnable),
                     ),
             ),
           ),
           const SizedBox(height: 8),
           if (snippetCount == 0)
-            const Text(
-                'Chưa có snippet nào. Tạo snippet ở tab "Snippet" trước, '
-                'rồi quay lại đây thử gõ tắt!',
+            Text(l10n.playgroundNoSnippets,
                 textAlign: TextAlign.center),
           Text(
-            'Prefix mặc định: "${AppLimits.defaultTriggerPrefix}" '
-            '(Pro: cho phép đổi)',
+            l10n.playgroundPrefixDefault(AppLimits.defaultTriggerPrefix),
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
