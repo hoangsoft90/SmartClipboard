@@ -41,9 +41,11 @@ jobs:
       - name: Save custom files before flutter create
         run: |
           mkdir -p /tmp/custom-backup
-          # Save pubspec files (flutter create --overwrite destroys them)
+          # Save pubspec files
           cp pubspec.yaml /tmp/custom-backup/pubspec.yaml
           cp pubspec.lock /tmp/custom-backup/pubspec.lock || true
+          # Save lib/ (flutter create --overwrite replaces all Dart files)
+          cp -r lib /tmp/custom-backup/lib
           # Save android custom files
           cp android/app/src/main/AndroidManifest.xml /tmp/custom-backup/AndroidManifest.xml
           cp -r android/app/src/main/res /tmp/custom-backup/res
@@ -64,9 +66,12 @@ jobs:
 
       - name: Restore custom files
         run: |
-          # Restore pubspec (CRITICAL - flutter create overwrites it)
+          # Restore pubspec
           cp /tmp/custom-backup/pubspec.yaml pubspec.yaml
           cp /tmp/custom-backup/pubspec.lock pubspec.lock || true
+          # Restore lib/ (CRITICAL - flutter create replaces with counter demo)
+          rm -rf lib
+          cp -r /tmp/custom-backup/lib lib
           # Restore android custom files
           cp /tmp/custom-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           cp -r /tmp/custom-backup/res/* android/app/src/main/res/
