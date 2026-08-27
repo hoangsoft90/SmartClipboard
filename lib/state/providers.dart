@@ -109,7 +109,7 @@ class AppSettings {
 
 class AppSettingsController extends StateNotifier<AppSettings> {
   final MetaDao _meta;
-  AppSettingsController(this._meta) : super(const AppSettings()) {
+  AppSettingsController(this._meta) : super(AppSettings()) {
     _load();
   }
 
