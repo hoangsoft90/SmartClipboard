@@ -24,9 +24,10 @@ class AppDatabase {
 
   static Future<void> _onConfigure(Database db) async {
     // STRICT RULE 3: WAL mode bắt buộc.
-    await db.execute('PRAGMA journal_mode=WAL');
+    // sqflite Android: PRAGMA phải dùng rawQuery, KHÔNG dùng execute.
+    await db.rawQuery('PRAGMA journal_mode=WAL');
     // Bật FK để ON DELETE SET NULL của snippets.folder_id hoạt động đúng.
-    await db.execute('PRAGMA foreign_keys=ON');
+    await db.rawQuery('PRAGMA foreign_keys=ON');
   }
 }
 
