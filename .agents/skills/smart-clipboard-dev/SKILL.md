@@ -1,11 +1,15 @@
-# Smart Clipboard — Development Skill
+# Smart Clipboard — Project-Specific Dev Skill
+
+## General Flutter Android lessons → Xem `flutter-android-ci` + `flutter-android-debug`
+
+---
 
 ## Project Overview
 Smart Clipboard & Text Expander — Personal Text Memory app built with Flutter.
 
 ## Tech Stack
 - **Framework**: Flutter 3.24.0
-- **State Management**: Riverpod ( thống nhất toàn app — STRICT RULE 18)
+- **State Management**: Riverpod (thống nhất toàn app — STRICT RULE 18)
 - **Database**: SQLite (sqflite) with WAL mode
 - **Encryption**: AES-256-GCM via `encrypt` package
 - **Platform**: Android (primary), Web (limited)
@@ -16,92 +20,13 @@ Smart Clipboard & Text Expander — Personal Text Memory app built with Flutter.
 
 ---
 
-## QUY TẮC PHÁT TRIỂN (PHẢI TUÂN THỦ)
+## QUY TẮC PHÁT TRIỂN
 
-### 1. KHÔNG BAO GIỜ build local
-User nói rõ: "Tuyệt đối ko build apk trên local, xoá hết android dev tools ở local"
-→ Luôn dùng GitHub Actions
+1. **KHÔNG build local** — luôn dùng GitHub Actions
+2. **Luôn verify trên thiết bị thật** — compile pass ≠ app chạy được
+3. **Push to main** → auto build trên GH Actions
 
-### 2. Luôn verify trên thiết bị thật
-Code compile pass ≠ app chạy được. PHẢI cài APK lên phone + check logcat.
-
-### 3. Debug qua adb
-```bash
-# Clear log, start app, capture logs
-adb shell am force-stop com.smartclip.smartclipboard
-adb logcat -c
-adb shell am start -n com.smartclip.smartclipboard/.MainActivity
-sleep 3
-adb logcat -d -t 300 | grep -i "flutter\|error\|exception"
-```
-
----
-
-## CODE PATTERNS (PHẢI LÀM THEO)
-
-### Model classes
-- Luôn có `fromMap()`, `toMap()`, `copyWith()`
-- Luôn import `package:sqflite/sqflite.dart` nếu dùng `Database` type
-
-```dart
-class Snippet {
-  // ... fields ...
-  
-  factory Snippet.fromMap(Map<String, Object?> map) => Snippet(...);
-  Map<String, Object?> toMap() => {...};
-  
-  // BẮT BUỘC có copyWith — thiếu sẽ compile error
-  Snippet copyWith({String? id, String? title, ...}) =>
-      Snippet(id: id ?? this.id, title: title ?? this.title, ...);
-}
-```
-
-### SQLite PRAGMA (Android-specific)
-```dart
-// SAI — crash trên Android sqflite
-await db.execute('PRAGMA journal_mode=WAL');
-
-// ĐÚNG — PHẢI dùng rawQuery
-await db.rawQuery('PRAGMA journal_mode=WAL');
-```
-
-### AsyncValue handling
-```dart
-// SAI — AsyncValue<int> không phải int
-final total = count + snippetArchived;
-
-// ĐÚNG — extract .value trước
-final snippetCount = snippetArchived.value ?? 0;
-final total = count + snippetCount;
-```
-
-### encrypt package — IV constructor
-```dart
-// SAI
-enc.IV.fromBytes(nonce)
-
-// ĐÚNG
-enc.IV(nonce)  //接受 Uint8List
-```
-
-### AppSettings / State classes
-```dart
-// SAI — const constructor với List.last không phải constant expression
-const AppSettings({this.expirationDays = AppLimits.expirationOptionsDays.last});
-
-// ĐÚNG — dùng factory constructor
-const AppSettings._({required this.expirationDays, ...});
-factory AppSettings({int? expirationDays, ...}) =>
-    AppSettings._(expirationDays: expirationDays ?? 30, ...);
-
-// AppSettingsController: KHÔNG dùng const khi gọi factory
-super(const AppSettings())  // SAI — factory không phải const
-super(AppSettings())         // ĐÚNG
-```
-
----
-
-## PROJECT STRUCTURE
+## Project Structure
 ```
 lib/
 ├── core/
@@ -117,7 +42,7 @@ lib/
 │   ├── playground/      # PlaygroundScreen (P0 bắt buộc)
 │   ├── settings/        # SettingsScreen
 │   └── onboarding/      # OnboardingScreen (4 trang)
-├── services/            # auth, backup, cache_sync, clipboard, 
+├── services/            # auth, backup, cache_sync, clipboard,
 │                        # expansion_engine, metrics, privacy, share_intent
 ├── state/               # providers.dart (Riverpod — thống nhất toàn app)
 └── widgets/             # lock_gate, privacy_banner, pro_upgrade_banner, save_snippet_dialog
@@ -135,7 +60,7 @@ lib/
 
 ## Build Configuration
 - **Android SDK**: API 34 (compileSdk), API 23 (minSdk)
-- **Java/Kotlin**: JVM target 17 (CẢ HAI phải match)
+- **Java/Kotlin**: JVM target 17
 - **Gradle**: 8.3
 - **Network**: HTTP cleartext allowed (network_security_config.xml)
 
@@ -156,7 +81,7 @@ lib/
 19. Chỉ 9 packages whitelist
 20. Playground bắt buộc
 
-## Packages Whitelist (mục 14)
+## Packages Whitelist
 1. flutter_riverpod
 2. sqflite
 3. path_provider
@@ -169,48 +94,21 @@ lib/
 
 ## Testing
 ```bash
-flutter test          # Chạy test logic thuần
-flutter analyze       # Kiểm tra type errors
+flutter test
+flutter analyze
 ```
 
-## Common Issues & Fixes
-
-### App crash khi mở trên phone thật
-1. Check logcat: `adb logcat | grep flutter`
-2. Nguyên nhân hay gặp:
-   - PRAGMA SQLite dùng `execute()` thay vì `rawQuery()`
-   - Thiếu import `sqflite` → `'Database' isn't a type`
-   - AsyncValue không extract `.value` trước khi dùng
-
-### Build fails trên GH Actions
-Xem skill `smart-clipboard-build` — có13 bài học chi tiết
-
-### APK không có trong Artifacts
-- Check upload paths trong workflow
-- `rootProject.buildDir = "../build"` redirect output
-
----
-
-## QUICK REFERENCE
-
-### Push + Build
+## Quick Reference
 ```bash
+# Push
 git add -A && git commit -m "message" && git push origin main
-```
 
-### Check Build Status
-```bash
+# Check build
 curl -s -H "Authorization: token $GH_TOKEN" \
   "https://api.github.com/repos/hoangsoft90/SmartClipboard/actions/runs?per_page=1"
-```
 
-### Debug on Phone
-```bash
+# Debug phone
 adb shell am force-stop com.smartclip.smartclipboard
 adb logcat -c && adb shell am start -n com.smartclip.smartclipboard/.MainActivity
 sleep 3 && adb logcat -d -t 300 | grep -i "flutter\|error"
 ```
-
-### Download APK
-1. Go to: `https://github.com/hoangsoft90/SmartClipboard/actions`
-2. Click latest workflow run → Artifacts → Download
