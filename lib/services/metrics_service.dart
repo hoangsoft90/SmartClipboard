@@ -47,11 +47,11 @@ class MetricsService {
   }
 
   Future<Map<String, int>> summary() async => {
-        'snippets_created': await count(kSnippetsCreated),
-        'expansion_count': await count(kExpansionCount),
-        'clipboard_items_saved': await count(kClipboardItemsSaved),
-        'clipboard_items_reused': await count(kClipboardItemsReused),
-        'playground_expansions': await count(kPlaygroundExpansions),
-        'days_active': await activeDays(),
+        kSnippetsCreated: await count(kSnippetsCreated),
+        kExpansionCount: await count(kExpansionCount),
+        kClipboardItemsSaved: await count(kClipboardItemsSaved),
+        kClipboardItemsReused: await count(kClipboardItemsReused),
+        kPlaygroundExpansions: await count(kPlaygroundExpansions),
+        kDaysActive: await activeDays(),
       };
 }

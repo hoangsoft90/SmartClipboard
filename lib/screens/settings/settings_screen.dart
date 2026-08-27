@@ -134,9 +134,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: () => Navigator.pop(ctx), child: const Text('Huỷ')),
           FilledButton(
             onPressed: () {
-              if (passController.text.length >= 8) {
-                Navigator.pop(ctx, passController.text);
+              if (passController.text.length < 8) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Passphrase phải có ít nhất 8 ký tự.'),
+                  ),
+                );
+                return;
               }
+              Navigator.pop(ctx, passController.text);
             },
             child: const Text('Export'),
           ),
@@ -189,8 +195,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx), child: const Text('Huỷ')),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx,
-                [pathController.text.trim(), passController.text]),
+            onPressed: () {
+              if (pathController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  const SnackBar(
+                    content: Text('Vui lòng nhập đường dẫn file backup.'),
+                  ),
+                );
+                return;
+              }
+              Navigator.pop(ctx,
+                  [pathController.text.trim(), passController.text]);
+            },
             child: const Text('Restore'),
           ),
         ],

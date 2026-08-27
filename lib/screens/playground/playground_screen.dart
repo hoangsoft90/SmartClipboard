@@ -140,12 +140,22 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                   ? 'Bàn phím Smart Clipboard đã bật'
                   : '💡 Bật keyboard Smart Clipboard để dùng ngay trên mọi ứng '
                       'dụng!'),
+              subtitle: keyboardEnabled ? null : const Text(
+                  '🔧 Tính năng sẽ có ở Phase 1 — hiện tại chỉ dùng được '
+                  'trong Playground',
+                  style: TextStyle(fontSize: 12)),
               trailing: keyboardEnabled
                   ? null
                   : TextButton(
-                      onPressed: () => ref
-                          .read(nativeBridgeProvider)
-                          .openKeyboardSettings(),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Bàn phím Smart Clipboard chưa khả '
+                                'dụng ở Phase 0. Đang phát triển!'),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      },
                       child: const Text('Bật'),
                     ),
             ),
