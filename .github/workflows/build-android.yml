@@ -62,6 +62,10 @@ jobs:
 
       - name: Generate Flutter platform scaffolding
         run: |
+          # Remove l10n files BEFORE flutter create (it detects l10n.yaml
+          # and tries gen-l10n which fails without generate:true in new pubspec)
+          rm -f l10n.yaml
+          rm -rf lib/l10n lib/generated
           flutter create . \
             --org com.smartclip \
             --project-name smart_clipboard \
