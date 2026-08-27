@@ -191,19 +191,20 @@ class _KeyboardEnableBanner extends ConsumerWidget {
               color: Theme.of(context).colorScheme.secondaryContainer,
               child: SafeArea(
                 bottom: false,
-                child: ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.keyboard),
-                  title: const Text(
-                      'Bật bàn phím Smart Clipboard để gõ tắt mọi nơi',
-                      style: TextStyle(fontSize: 13)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.close, size: 18),
-                    onPressed: onDismiss,
+                child:                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.keyboard),
+                    title: const Text(
+                        'Bật bàn phím Smart Clipboard để gõ tắt mọi nơi',
+                        style: TextStyle(fontSize: 13)),
+                    subtitle: const Text('Sắp ra mắt ở Phase 1',
+                        style: TextStyle(fontSize: 11)),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: onDismiss,
+                    ),
+                    onTap: onDismiss, // Dismiss vì Phase 1 chưa có
                   ),
-                  onTap: () =>
-                      ref.read(nativeBridgeProvider).openKeyboardSettings(),
-                ),
               ),
             ),
     );

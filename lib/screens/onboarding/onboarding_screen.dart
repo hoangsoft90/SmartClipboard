@@ -177,22 +177,28 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
+          const Card(
+            color: Colors.amber,
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Text(
+                '🔧 Tính năng bàn phím sẽ có ở Phase 1.\n'
+                'Hiện tại bạn vẫn có thể dùng Clipboard History, '
+                'Snippets, và Playground.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: () async {
-              await ref.read(nativeBridgeProvider).openKeyboardSettings();
-              await _checkStatus();
-            },
+            onPressed: null, // Disabled — Phase 1 feature
             icon: const Icon(Icons.settings),
-            label: const Text('Enable Keyboard'),
+            label: const Text('Bật bàn phím (Phase 1)'),
           ),
-          OutlinedButton(
-            onPressed: _checkStatus,
-            child: Text(_enabled == null
-                ? 'Kiểm tra trạng thái'
-                : (_enabled!
-                    ? '✅ Đã bật bàn phím'
-                    : '⏳ Chưa bật — bạn có thể bật sau')),
-          ),
+          const Text('Tính năng này sẽ khả dụng trong bản cập nhật tới',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
         ],
       ),
     );
