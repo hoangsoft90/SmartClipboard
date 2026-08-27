@@ -9,14 +9,22 @@ rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
     project.evaluationDependsOn(":app")
+}
 
-    // Force consistent JVM target across all subprojects (fix plugin conflicts)
-    project.plugins.whenPluginAdded { plugin ->
-        if (plugin.class.name.startsWith('org.jetbrains.kotlin')) {
-            project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-                kotlinOptions {
-                    jvmTarget = '17'
+// Force consistent JVM target across ALL subprojects (plugins like receive_sharing_intent set jvmTarget=17)
+subprojects {
+    afterEvaluate {
+        if (project.hasProperty('android')) {
+            project.android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
                 }
+            }
+        }
+        project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = '17'
             }
         }
     }
