@@ -38,58 +38,65 @@ jobs:
       - name: Flutter doctor
         run: flutter doctor -v
 
-      - name: Save custom Android files
+      - name: Save custom files before flutter create
         run: |
-          # Save our custom Android files before flutter create overwrites them
-          mkdir -p /tmp/android-backup
-          cp -r android/app/src/main/AndroidManifest.xml /tmp/android-backup/ 2>/dev/null || true
-          cp -r android/app/src/main/res /tmp/android-backup/res 2>/dev/null || true
-          cp -r android/app/src/main/kotlin /tmp/android-backup/kotlin 2>/dev/null || true
-          cp android/app/build.gradle /tmp/android-backup/build.gradle 2>/dev/null || true
-          cp android/build.gradle /tmp/android-backup/root-build.gradle 2>/dev/null || true
-          cp android/settings.gradle /tmp/android-backup/settings.gradle 2>/dev/null || true
-          cp android/gradle.properties /tmp/android-backup/gradle.properties 2>/dev/null || true
-          echo "Custom Android files saved"
+          mkdir -p /tmp/custom-backup
+          # Save pubspec files (flutter create --overwrite destroys them)
+          cp pubspec.yaml /tmp/custom-backup/pubspec.yaml 2>/dev/null || true
+          cp pubspec.lock /tmp/custom-backup/pubspec.lock 2>/dev/null || true
+          # Save gradle wrapper (flutter create generates old version)
+          cp android/gradle/wrapper/gradle-wrapper.properties /tmp/custom-backup/gradle-wrapper.properties 2>/dev/null || true
+          # Save android custom files
+          cp android/app/src/main/AndroidManifest.xml /tmp/custom-backup/AndroidManifest.xml 2>/dev/null || true
+          cp -r android/app/src/main/res /tmp/custom-backup/res 2>/dev/null || true
+          cp -r android/app/src/main/kotlin /tmp/custom-backup/kotlin 2>/dev/null || true
+          cp android/app/build.gradle /tmp/custom-backup/app-build.gradle 2>/dev/null || true
+          cp android/build.gradle /tmp/custom-backup/root-build.gradle 2>/dev/null || true
+          cp android/settings.gradle /tmp/custom-backup/settings.gradle 2>/dev/null || true
+          cp android/gradle.properties /tmp/custom-backup/gradle.properties 2>/dev/null || true
+          echo "All custom files saved"
 
       - name: Generate Flutter platform scaffolding
         run: |
-          # flutter create generates android/ folder structure
-          # --overwrite: regenerate platform files (we'll restore our custom ones after)
           flutter create . \
             --org com.smartclip \
             --project-name smart_clipboard \
             --platforms android \
             --overwrite
 
-      - name: Restore custom Android files
+      - name: Restore custom files
         run: |
-          # Restore our custom files that flutter create overwrote
-          cp /tmp/android-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          cp -r /tmp/android-backup/res/* android/app/src/main/res/ 2>/dev/null || true
-          cp -r /tmp/android-backup/kotlin/* android/app/src/main/kotlin/ 2>/dev/null || true
-          cp /tmp/android-backup/build.gradle android/app/build.gradle 2>/dev/null || true
-          cp /tmp/android-backup/root-build.gradle android/build.gradle 2>/dev/null || true
-          cp /tmp/android-backup/settings.gradle android/settings.gradle 2>/dev/null || true
-          cp /tmp/android-backup/gradle.properties android/gradle.properties 2>/dev/null || true
-          echo "Custom Android files restored"
+          # Restore pubspec (CRITICAL - flutter create overwrites it)
+          cp /tmp/custom-backup/pubspec.yaml pubspec.yaml 2>/dev/null || true
+          cp /tmp/custom-backup/pubspec.lock pubspec.lock 2>/dev/null || true
+          # Restore gradle wrapper (needs 8.3+, flutter creates 7.6.3)
+          cp /tmp/custom-backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
+          # Restore android custom files
+          cp /tmp/custom-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          cp -r /tmp/custom-backup/res/* android/app/src/main/res/ 2>/dev/null || true
+          cp -r /tmp/custom-backup/kotlin/* android/app/src/main/kotlin/ 2>/dev/null || true
+          cp /tmp/custom-backup/app-build.gradle android/app/build.gradle 2>/dev/null || true
+          cp /tmp/custom-backup/root-build.gradle android/build.gradle 2>/dev/null || true
+          cp /tmp/custom-backup/settings.gradle android/settings.gradle 2>/dev/null || true
+          cp /tmp/custom-backup/gradle.properties android/gradle.properties 2>/dev/null || true
+          echo "All custom files restored"
 
-      - name: Verify critical Android files
+      - name: Verify critical files
         run: |
-          echo "=== Checking Android project structure ==="
-          ls -la android/app/build.gradle
-          ls -la android/app/src/main/AndroidManifest.xml
-          ls -la android/app/src/main/res/xml/network_security_config.xml
-          ls -la android/app/src/main/kotlin/com/smartclip/smartclipboard/MainActivity.kt
-          ls -la android/gradle/wrapper/gradle-wrapper.properties
-          echo "=== All critical files present ==="
+          echo "=== Gradle wrapper ==="
+          cat android/gradle/wrapper/gradle-wrapper.properties
+          echo "=== pubspec.yaml head ==="
+          head -30 pubspec.yaml
+          echo "=== Android files ==="
+          ls -la android/app/build.gradle android/app/src/main/AndroidManifest.xml android/app/src/main/res/xml/network_security_config.xml
 
-      - name: Generate launcher icons (if ImageMagick available)
+      - name: Generate launcher icons
         run: |
           if command -v convert &> /dev/null; then
             chmod +x scripts/generate-icons.sh 2>/dev/null || true
-            ./scripts/generate-icons.sh 2>/dev/null || echo "Icon generation skipped (no ImageMagick)"
+            ./scripts/generate-icons.sh 2>/dev/null || echo "Icon generation skipped"
           else
-            echo "ImageMagick not available, using default Flutter icons"
+            echo "ImageMagick not available, using vector icons"
           fi
 
       - name: Install Flutter dependencies
@@ -101,14 +108,14 @@ jobs:
       - name: Run Flutter tests
         run: flutter test --no-pub || true
 
-      - name: Build debug APK (gradle directly)
+      - name: Build debug APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --stacktrace
           cd ..
 
-      - name: Build release APK (gradle directly)
+      - name: Build release APK
         run: |
           cd android
           chmod +x gradlew
