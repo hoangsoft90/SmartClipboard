@@ -155,6 +155,47 @@ path: |
   android/app/build/outputs/apk/**/*.apk
 ```
 
+### Kotlin/IME Pitfalls
+
+#### 14. Kotlin lambda type mismatch for Java interface
+**Symptom**: `Type mismatch: inferred type is (...) -> Unit but InterfaceName was expected`
+**Root cause**: Java interface `OnKeyPressListener` has one method, but Kotlin SAM conversion fails with wrong lambda signature
+**Fix**: Dùng anonymous object thay vì lambda:
+```kotlin
+// ❌ WRONG
+keyboardView.setOnKeyPressListener { keyCode, _ -> onKeyPressed(keyCode) }
+
+// ✅ CORRECT — use anonymous object
+keyboardView.setOnKeyPressListener(object : OnKeyPressListener {
+    override fun onKeyPress(keyCode: Int) { onKeyPressed(keyCode) }
+})
+```
+
+#### 15. String vs Char comparison in Kotlin
+**Symptom**: `Operator '==' cannot be applied to 'String' and 'Char'`
+**Root cause**: `String == Char` không compare được trực tiếp
+**Fix**: Dùng String literal `";"` hoặc `ch.first() == ';'`:
+```kotlin
+// ❌ WRONG
+if (ch == ';')
+
+// ✅ CORRECT
+if (ch == ";")  // both are String
+```
+
+#### 16. Dead code referencing unavailable APIs
+**Symptom**: `Unresolved reference: extractText` even with try-catch
+**Root cause**: Kotlin compiler解析 dead code before runtime. If API doesn't exist at compile target, try-catch không rescue được
+**Fix**: Xóa dead code hoàn toàn — KHÔNG giữ lại "just in case"
+**Lesson**: Không viết code reference API chưa verify tồn tại ở target API level
+
+#### 17. InputConnection.extractText / ExtractedTextRequest
+**Symptom**: `Unresolved reference: extractText` + `Too many arguments for constructor ExtractedTextRequest`
+**Root cause**: `extractText` method không available trên tất cả API levels. `ExtractedTextRequest()` constructor takes no args (not `(Int)`)
+**Fix**: Không dùng `extractText` — thay bằng cách khác (composing text, hoặc dùng `getExtractedText` nếu cần)
+
+---
+
 ### Code/Dart Pitfalls
 
 #### 8. PRAGMA SQLite crash on Android
@@ -193,7 +234,11 @@ path: |
 - [ ] Không có const constructor với List.last / non-constant expression?
 - [ ] encrypt dùng `IV(Uint8List)` không phải `IV.fromBytes`?
 
-### Android
+### Kotlin/Android
+- [ ] Lambda cho Java interface dùng SAM conversion đúng? (anonymous object nếu lambda fail)
+- [ ] String vs Char comparison đúng? (dùng `";"` không dùng `';'`)
+- [ ] Không có dead code reference API chưa verify?
+- [ ] InputConnection API dùng đúng cách? (extractText có thể không available)
 - [ ] build.gradle KHÔNG có minifyEnabled / shrinkResources?
 - [ ] Java + Kotlin cùng JVM target?
 - [ ] AndroidManifest.xml KHÔNG có `android:banner` (trừ TV app)?
