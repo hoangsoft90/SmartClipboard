@@ -195,15 +195,9 @@ class SmartClipboardIME : InputMethodService() {
 
         if (content != null) {
             // Trigger matched! Delete the trigger text and insert content.
-            // Use composing text approach for clean replacement.
-            val beforeText = getBeforeCursorText(ic, bufferStr.length + 50)
-
-            // Calculate how many chars to delete
-            // The trigger text is in the buffer + was committed via commitText
-            // We need to delete exactly the trigger length from the cursor
             val charsToDelete = bufferStr.length
 
-            // UTF-16 safe deletion
+            // Delete trigger text and insert snippet content
             ic.deleteSurroundingText(charsToDelete, 0)
             ic.commitText(content, 1)
             ic.commitText(delimiter.toString(), 1)
@@ -314,16 +308,6 @@ class SmartClipboardIME : InputMethodService() {
         suggestionStrip.setSuggestions(matching, prefix.length)
     }
 
-    private fun getBeforeCursorText(ic: InputConnection, maxLength: Int): String {
-        return try {
-            val extracted = ic.extractText(
-                android.view.inputmethod.ExtractedTextRequest(0), 0
-            )
-            extracted?.text?.toString()?.takeLast(maxLength) ?: ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
 }
 
 // ================================================================
