@@ -15,12 +15,12 @@ void main() {
       db = await openDatabase(
         inMemoryDatabasePath,
         version: DbMigrations.targetVersion,
-        onConfigure: (db) async {
-          await db.rawQuery('PRAGMA journal_mode=WAL');
-          await db.rawQuery('PRAGMA foreign_keys=ON');
+        onConfigure: (database) async {
+          await database.rawQuery('PRAGMA journal_mode=WAL');
+          await database.rawQuery('PRAGMA foreign_keys=ON');
         },
-        onCreate: (db, version) =>
-            DbMigrations.runInTransaction(db, from: 0, to: version),
+        onCreate: (database, version) =>
+            DbMigrations.runInTransaction(database, from: 0, to: version),
       );
       repo = ClipboardRepository(db);
     });
@@ -81,12 +81,12 @@ void main() {
       db = await openDatabase(
         inMemoryDatabasePath,
         version: DbMigrations.targetVersion,
-        onConfigure: (db) async {
-          await db.rawQuery('PRAGMA journal_mode=WAL');
-          await db.rawQuery('PRAGMA foreign_keys=ON');
+        onConfigure: (database) async {
+          await database.rawQuery('PRAGMA journal_mode=WAL');
+          await database.rawQuery('PRAGMA foreign_keys=ON');
         },
-        onCreate: (db, version) =>
-            DbMigrations.runInTransaction(db, from: 0, to: version),
+        onCreate: (database, version) =>
+            DbMigrations.runInTransaction(database, from: 0, to: version),
       );
       repo = ClipboardRepository(db);
     });

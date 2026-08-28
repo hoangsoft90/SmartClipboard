@@ -30,7 +30,7 @@ void main() {
       meta = MetaDao(db);
       service = ClipboardService(
         repo: repo,
-        meta: meta,
+        meta: meta,  // FIX: MetaDao, không phải Database
         metrics: MetricsService(db),
         privacy: PrivacyService(),
       );
