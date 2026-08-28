@@ -51,12 +51,7 @@
             </intent-filter>
         </activity>
 
-        <!-- 
-        FIX 1.5: Tạm ẩn IME Service khỏi manifest — Phase 0 clean build.
-        SmartClipboardIME chưa hoàn thiện, không đăng ký để tránh crash.
-        Bật lại khi triển khai Phase 1 IME.
-        -->
-        <!--
+        <!-- FIX 5.3 + 5.4: IME Service — đã fix meta-data typo + enabled -->
         <service
             android:name=".SmartClipboardIME"
             android:label="Smart Clipboard"
@@ -65,11 +60,11 @@
             <intent-filter>
                 <action android:name="android.view.InputMethod" />
             </intent-filter>
+            <!-- FIX 5.3: android.view_im → android.view.im (đúng chuẩn Android) -->
             <meta-data
-                android:name="android.view_im"
+                android:name="android.view.im"
                 android:resource="@xml/method_metadata" />
         </service>
-        -->
 
         <!-- FIX 3.2: FileProvider để share backup files -->
         <provider

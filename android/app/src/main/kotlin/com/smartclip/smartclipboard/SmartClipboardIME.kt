@@ -157,11 +157,12 @@ class SmartClipboardIME : InputMethodService() {
                 // Regular character
                 val ch = keyboardView.getCharForKey(keyCode) ?: return
 
-                // Handle ;; escape
+                // FIX 5.2: Handle ;; escape
                 if (ch == ";" && typingBuffer.isNotEmpty() && typingBuffer.last() == ';') {
-                    // ;; → output single ;, clear buffer
+                    // ;; → delete previous ; and keep only one ;
+                    ic.deleteSurroundingText(1, 0)  // FIX 5.2: Delete previous ;
                     typingBuffer.clear()
-                    ic.commitText(";", 1)
+                    // Don't commit another ; — the remaining one is already there
                     updateSuggestions("")
                     return
                 }
@@ -294,17 +295,20 @@ class SmartClipboardIME : InputMethodService() {
     // Suggestion strip
     // ================================================================
 
+    // FIX 5.1: Update suggestions — pass trigger AND content
     private fun updateSuggestions(prefix: String) {
         if (isPasswordField() || prefix.isEmpty()) {
             suggestionStrip.clear()
             return
         }
 
-        val matching = triggerMap.keys
-            .filter { it.startsWith(prefix) && it != prefix }
+        // Filter triggers that start with typed prefix
+        val matching = triggerMap.entries
+            .filter { it.key.startsWith(prefix) && it.key != prefix }
             .take(5)
-            .sorted()
+            .sortedBy { it.key }
 
+        // FIX 5.1: Pass both trigger key AND content to suggestion strip
         suggestionStrip.setSuggestions(matching, prefix.length)
     }
 
@@ -329,23 +333,25 @@ class SuggestionStrip(context: Context) : LinearLayout(context) {
         addView(container, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
     }
 
-    fun setSuggestions(suggestions: List<String>, typedLength: Int) {
+    // FIX 5.1: Accept Map entries (trigger → content) instead of just keys
+    fun setSuggestions(suggestions: List<Map.Entry<String, String>>, typedLength: Int) {
         container.removeAllViews()
 
-        for (trigger in suggestions) {
+        for ((trigger, content) in suggestions) {
             val chip = TextView(context).apply {
+                // FIX 5.1: Show trigger as label but commit content on click
                 text = trigger
                 setPadding(16, 8, 16, 8)
                 textSize = 14f
                 setTextColor(0xFF1976D2.toInt())
                 setBackgroundColor(0x00000000)
                 setOnClickListener {
-                    // Callback to parent IME to insert this suggestion
+                    // FIX 5.1: Delete trigger text and commit CONTENT, not trigger
                     (context as? SmartClipboardIME)?.let { ime ->
                         val ic = ime.currentInputConnection ?: return@let
                         val charsToDelete = typedLength
                         ic.deleteSurroundingText(charsToDelete, 0)
-                        ic.commitText(trigger, 1)
+                        ic.commitText(content, 1)  // FIX: commit content!
                     }
                 }
             }
