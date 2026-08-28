@@ -25,6 +25,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   bool _keyboardBannerDismissed = false;
   ShareIntentService? _shareIntent;
 
+  // FIX 1.2: Lưu text bị block để truyền trực tiếp vào saveContent()
+  String? _blockedText;
+
   // Safe Back: double-tap trong 2s để thoát app (mục 3.1).
   DateTime? _lastBackPress;
 
@@ -59,6 +62,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _captureOnResume() async {
+    // FIX 1.2: Đọc clipboard TRƯỚC để có text cho trường hợp blocked
+    final data = await Clipboard.getData('text/plain');
+    final text = data?.text;
+
     final result =
         await ref.read(clipboardServiceProvider).captureFromSystem();
     await ref.read(clipboardListProvider.notifier).reload();
@@ -80,6 +87,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           .showSnackBar(SnackBar(content: Text(msg)));
     }
     if (result == CaptureResult.blockedHighRisk && mounted) {
+      // FIX 1.2: Lưu text bị block để truyền trực tiếp vào saveContent()
+      _blockedText = text;
       _showHighRiskDialog();
     }
   }
@@ -99,9 +108,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              // FIX 1.2: Truyền trực tiếp blockedText — KHÔNG đọc lại clipboard
+              final textToSave = _blockedText ?? '';
+              _blockedText = null; // Clear sau khi dùng
               await ref
                   .read(clipboardServiceProvider)
-                  .confirmSaveBlockedContent();
+                  .confirmSaveBlockedContent(textToSave);
               await ref.read(clipboardListProvider.notifier).reload();
             },
             child: Text(l10n.highRiskSaveAndDelete),

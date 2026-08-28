@@ -37,11 +37,26 @@ class CacheSyncService {
     return File(p.join(dir.path, cacheFileName));
   }
 
+  /// FIX 1.4: Đọc cache_version từ SQLite metadata.
+  /// Trả về 0 nếu chưa tồn tại (lần chạy đầu tiên).
   Future<int> currentVersion() async {
     final rows = await db.query('app_meta',
         where: 'key = ?', whereArgs: [cacheVersionMetaKey], limit: 1);
     if (rows.isEmpty) return 0;
     return int.tryParse(rows.first['value'] as String? ?? '') ?? 0;
+  }
+
+  /// FIX 1.4: Tăng cache_version monotonic trong SQLite Transaction.
+  /// Trả về version mới sau khi tăng.
+  Future<int> _incrementVersion() async {
+    final current = await currentVersion();
+    final newVersion = current + 1;
+    await db.insert(
+      'app_meta',
+      {'key': cacheVersionMetaKey, 'value': '$newVersion'},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    return newVersion;
   }
 
   /// Ghi đè toàn bộ `trigger → content` đang enabled ra file cache và bump
@@ -52,34 +67,28 @@ class CacheSyncService {
   Future<File> regenerateSnippetCache() async {
     // Web: file cache không khả dụng — skip ghi file.
     if (kIsWeb) {
-      // Vẫn bump cache_version trong DB để consistency.
-      final version = DateTime.now().millisecondsSinceEpoch;
-      await db.insert(
-        'app_meta',
-        {'key': cacheVersionMetaKey, 'value': '$version'},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      // Return dummy file reference — caller không dùng path trên web.
+      // FIX 1.4: Dùng monotonic counter thay vì timestamp.
+      await _incrementVersion();
       return File('');
     }
 
+    // FIX 1.3: Lưu fullTrigger (bao gồm prefix) làm key trong JSON cache.
+    // Ví dụ: ';email' thay vì 'email' — đảm bảo IME tra đúng key.
     final rows = await db.query(
       'snippets',
-      columns: ['trigger', 'content'],
+      columns: ['trigger', 'content', 'prefix'],
       where: 'is_enabled = 1 AND is_archived = 0',
     );
-    final triggers = <String, String>{
-      for (final row in rows)
-        row['trigger'] as String: row['content'] as String,
-    };
+    final triggers = <String, String>{};
+    for (final row in rows) {
+      final trigger = row['trigger'] as String;
+      final prefix = (row['prefix'] as String?) ?? ';';
+      // Luôn lưu với prefix để IME match chính xác
+      triggers['$prefix$trigger'] = row['content'] as String;
+    }
 
-    // cache_version = timestamp tăng dần mỗi lần regen.
-    final version = DateTime.now().millisecondsSinceEpoch;
-    await db.insert(
-      'app_meta',
-      {'key': cacheVersionMetaKey, 'value': '$version'},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    // FIX 1.4: Monotonic counter — tăng từ DB, KHÔNG dùng timestamp.
+    final version = await _incrementVersion();
 
     final file = await _cacheFile();
     final payload = jsonEncode({

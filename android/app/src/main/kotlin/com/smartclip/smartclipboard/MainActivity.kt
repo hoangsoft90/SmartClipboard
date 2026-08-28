@@ -4,17 +4,22 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.view.inputmethod.InputMethodManager
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 /**
  * MainActivity — Phase 1: handles MethodChannel for keyboard IME integration.
  *
+ * FIX 1.1: Kế thừa FlutterFragmentActivity thay vì FlutterActivity
+ * để local_auth (biometric) plugin hoạt động đúng.
+ * FlutterActivity không hỗ trợ Fragment lifecycle cần thiết cho
+ * biometric prompt.
+ *
  * STRICT RULE 6: Flutter App process và Android IME process là hai tiến trình
  * OS độc lập, KHÔNG chia sẻ bộ nhớ. Sync chỉ qua file cache.
  */
-class MainActivity : FlutterActivity() {
+class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val CHANNEL = "smart_clipboard/native_bridge"

@@ -117,7 +117,10 @@ Future<void> showSaveSharedTextDialog(
           title: Text(l10n.shareSaveToHistory),
           onTap: () async {
             Navigator.pop(ctx);
-            await ref.read(clipboardServiceProvider).captureFromSystem(
+            // FIX 1.2: Truyền trực tiếp shared text vào saveContent()
+            // KHÔNG đọc lại clipboard — tránh race condition
+            await ref.read(clipboardServiceProvider).saveContent(
+                  text,
                   forceSave: true,
                 );
             await ref.read(clipboardListProvider.notifier).reload();

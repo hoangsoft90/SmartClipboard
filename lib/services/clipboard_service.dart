@@ -34,15 +34,18 @@ class ClipboardService {
     required this.privacy,
   });
 
-  Future<CaptureResult> captureFromSystem({
-    bool forceSave = false,
-    int? forceExpiresAt,
-  }) async {
+  // ========================================================================
+  // FIX 1.2: Tách biệt đọc clipboard hệ thống và lưu nội dung
+  // ========================================================================
+
+  /// Đọc clipboard hệ thống và xử lý logic capture.
+  /// KHÔNG lưu trực tiếp — trả về kết quả để caller quyết định.
+  Future<CaptureResult> captureFromSystem() async {
     // Web: clipboard capture không khả dụng qua hệ thống.
     if (kIsWeb) return CaptureResult.empty;
 
     // Incognito / Pause Mode (P0 bắt buộc, mục 5.2): toggle 1 chạm dừng ghi.
-    if (!forceSave && await meta.getBool('capture_paused')) {
+    if (await meta.getBool('capture_paused')) {
       return CaptureResult.paused;
     }
 
@@ -52,15 +55,38 @@ class ClipboardService {
 
     // Heuristic trước khi lưu (CHỈ heuristic — mục 5.1).
     final assessment = privacy.assess(text);
-    if (!forceSave && assessment.level == PrivacyRiskLevel.highRisk) {
+    if (assessment.level == PrivacyRiskLevel.highRisk) {
       return CaptureResult.blockedHighRisk;
+    }
+
+    // An toàn để lưu — gọi saveContent
+    await saveContent(text);
+    return CaptureResult.saved;
+  }
+
+  /// FIX 1.2: Lưu trực tiếp nội dung `rawText` vào DB.
+  /// KHÔNG đọc lại Clipboard OS — tránh race condition khi clipboard đã đổi.
+  ///
+  /// [rawText]: nội dung cần lưu
+  /// [forceSave]: nếu true, bỏ qua pause mode (dùng khi user confirm save)
+  /// [forceExpiresAt]: nếu specified, ghi đè expiration
+  Future<void> saveContent(
+    String rawText, {
+    bool forceSave = false,
+    int? forceExpiresAt,
+  }) async {
+    if (kIsWeb) return;
+
+    // Nếu không force, kiểm tra pause mode
+    if (!forceSave && await meta.getBool('capture_paused')) {
+      return;
     }
 
     final expirationDays = await meta.getInt('expiration_days',
         fallback: AppLimits.expirationOptionsDays.last);
     final result = await repo.save(
-      text,
-      sourceApp: null, // Android 10+ không cho biết app nguồn của clipboard
+      rawText,
+      sourceApp: null,
       expirationDays: expirationDays,
       expiresAtOverride: forceExpiresAt,
     );
@@ -69,20 +95,20 @@ class ClipboardService {
         ? MetricsService.kClipboardItemsReused
         : MetricsService.kClipboardItemsSaved);
     await metrics.markActiveToday();
-
-    return result.wasDeduplicated
-        ? CaptureResult.deduplicated
-        : CaptureResult.saved;
   }
 
-  /// User xác nhận LƯU sau khi bị chặn vì nghi vấn cao → vẫn lưu nhưng gắn
-  /// expires_at ngắn (24h) theo banner mục 5.1.
-  Future<CaptureResult> confirmSaveBlockedContent() => captureFromSystem(
-        forceSave: true,
-        forceExpiresAt:
-            PrivacyService.suggestedExpiryForSuspect(
-                DateTime.now().millisecondsSinceEpoch),
-      );
+  /// FIX 1.2: User xác nhận LƯU nội dung bị block.
+  /// Nhận trực tiếp `blockedText` — KHÔNG đọc lại clipboard.
+  Future<CaptureResult> confirmSaveBlockedContent(String blockedText) async {
+    await saveContent(
+      blockedText,
+      forceSave: true,
+      forceExpiresAt:
+          PrivacyService.suggestedExpiryForSuspect(
+              DateTime.now().millisecondsSinceEpoch),
+    );
+    return CaptureResult.saved;
+  }
 
   /// Copy item từ history ra system clipboard + metrics reuse.
   Future<void> copyToSystem(ClipboardItem item) async {

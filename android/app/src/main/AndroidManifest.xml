@@ -54,7 +54,12 @@
             </intent-filter>
         </activity>
 
-        <!-- SmartClipboard IME — Phase 1 keyboard -->
+        <!-- 
+        FIX 1.5: Tạm ẩn IME Service khỏi manifest — Phase 0 clean build.
+        SmartClipboardIME chưa hoàn thiện, không đăng ký để tránh crash.
+        Bật lại khi triển khai Phase 1 IME.
+        -->
+        <!--
         <service
             android:name=".SmartClipboardIME"
             android:label="Smart Clipboard"
@@ -67,6 +72,7 @@
                 android:name="android.view_im"
                 android:resource="@xml/method_metadata" />
         </service>
+        -->
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
