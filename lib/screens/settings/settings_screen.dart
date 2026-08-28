@@ -170,7 +170,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _RestoreRestoreDialog(
+      builder: (ctx) => _RestoreBackupDialog(
         l10n: l10n,
         onRestore: (path, passphrase) async {
           try {
@@ -357,20 +357,20 @@ class _ExportRestoreDialogState extends State<_ExportRestoreDialog> {
 // ------------------------------------------------------------------
 // Restore Dialog — Stateful: validate path + loading + error inline
 // ------------------------------------------------------------------
-class _RestoreRestoreDialog extends StatefulWidget {
+class _RestoreBackupDialog extends StatefulWidget {
   final AppLocalizations l10n;
   final Future<String?> Function(String path, String passphrase) onRestore;
 
-  const _RestoreRestoreDialog({
+  const _RestoreBackupDialog({
     required this.l10n,
     required this.onRestore,
   });
 
   @override
-  State<_RestoreRestoreDialog> createState() => _RestoreRestoreDialogState();
+  State<_RestoreBackupDialog> createState() => _RestoreBackupDialogState();
 }
 
-class _RestoreRestoreDialogState extends State<_RestoreRestoreDialog> {
+class _RestoreBackupDialogState extends State<_RestoreBackupDialog> {
   final _passController = TextEditingController();
   final _pathController = TextEditingController();
   bool _loading = false;
