@@ -50,6 +50,8 @@ jobs:
           cp -r lib/generated /tmp/custom-backup/generated || true
           # Save lib/ (flutter create --overwrite replaces all Dart files)
           cp -r lib /tmp/custom-backup/lib
+          # Save test/ (flutter create --overwrite creates default widget_test.dart)
+          cp -r test /tmp/custom-backup/test || true
           # Save android custom files
           cp android/app/src/main/AndroidManifest.xml /tmp/custom-backup/AndroidManifest.xml
           cp -r android/app/src/main/res /tmp/custom-backup/res
@@ -82,6 +84,9 @@ jobs:
           # Restore lib/ (CRITICAL - flutter create replaces with counter demo)
           rm -rf lib
           cp -r /tmp/custom-backup/lib lib
+          # Restore test/ (flutter create creates default widget_test.dart)
+          rm -rf test
+          cp -r /tmp/custom-backup/test test || true
           # Restore android custom files
           cp /tmp/custom-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
           cp -r /tmp/custom-backup/res/* android/app/src/main/res/
