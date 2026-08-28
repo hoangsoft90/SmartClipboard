@@ -34,9 +34,6 @@ class MainActivity : FlutterFragmentActivity(), PluginRegistry.ActivityResultLis
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Register for activity results
-        addActivityResultListener(this)
-
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
