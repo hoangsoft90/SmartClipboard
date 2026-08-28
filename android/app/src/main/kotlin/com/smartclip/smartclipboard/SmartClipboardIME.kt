@@ -82,9 +82,11 @@ class SmartClipboardIME : InputMethodService() {
 
         // Keyboard
         keyboardView = SmartKeyboardView(this)
-        keyboardView.setOnKeyPressListener { keyCode, _ ->
-            onKeyPressed(keyCode)
-        }
+        keyboardView.setOnKeyPressListener(object : SmartKeyboardView.OnKeyPressListener {
+            override fun onKeyPress(keyCode: Int) {
+                onKeyPressed(keyCode)
+            }
+        })
         root.addView(keyboardView)
 
         return root
@@ -156,7 +158,7 @@ class SmartClipboardIME : InputMethodService() {
                 val ch = keyboardView.getCharForKey(keyCode) ?: return
 
                 // Handle ;; escape
-                if (ch == ';' && typingBuffer.isNotEmpty() && typingBuffer.last() == ';') {
+                if (ch == ";" && typingBuffer.isNotEmpty() && typingBuffer.last() == ';') {
                     // ;; → output single ;, clear buffer
                     typingBuffer.clear()
                     ic.commitText(";", 1)
@@ -313,10 +315,14 @@ class SmartClipboardIME : InputMethodService() {
     }
 
     private fun getBeforeCursorText(ic: InputConnection, maxLength: Int): String {
-        val extracted = ic.extractText(
-            android.view.inputmethod.ExtractedTextRequest(0), 0
-        )
-        return extracted?.text?.toString()?.takeLast(maxLength) ?: ""
+        return try {
+            val extracted = ic.extractText(
+                android.view.inputmethod.ExtractedTextRequest(0), 0
+            )
+            extracted?.text?.toString()?.takeLast(maxLength) ?: ""
+        } catch (_: Exception) {
+            ""
+        }
     }
 }
 
