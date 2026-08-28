@@ -13,12 +13,12 @@
     <!-- Background service for clipboard monitoring (Phase 1 — Kotlin/IME) -->
     <!-- KHÔNG có foreground service permission ở Phase 0: clipboard capture là resume-only -->
 
+    <!-- FIX 2.4: Không dùng usesCleartextTraffic cho local-first app -->
     <application
         android:label="Smart Clipboard"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        <!-- FIX 2.4: Xóa usesCleartextTraffic — không cần cho local-first app -->
         tools:targetApi="31">
 
         <activity
