@@ -108,7 +108,7 @@ jobs:
           echo "=== Gradle wrapper ==="
           cat android/gradle/wrapper/gradle-wrapper.properties
           echo "=== Android files ==="
-          ls -la android/app/build.gradle android/app/src/main/AndroidManifest.xml android/app/src/main/res/xml/network_security_config.xml
+          ls -la android/app/build.gradle android/app/src/main/AndroidManifest.xml
 
       - name: Generate launcher icons
         run: |
