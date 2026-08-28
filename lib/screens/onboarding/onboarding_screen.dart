@@ -140,6 +140,7 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final keyboardEnabled = ref.watch(keyboardEnabledProvider).value ?? false;
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -158,23 +159,31 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          Card(
-            color: Colors.amber,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                l10n.playgroundKeyboardSubtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13),
+          if (!keyboardEnabled)
+            Card(
+              color: Colors.amber,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  l10n.playgroundKeyboardSubtitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 12),
           FilledButton.icon(
-            onPressed: null,
-            icon: const Icon(Icons.settings),
-            label: Text(l10n.onboardingEnableKeyboard),
+            onPressed: () async {
+              await ref.read(nativeBridgeProvider).openKeyboardSettings();
+              // Re-check after returning
+              ref.invalidate(keyboardEnabledProvider);
+            },
+            icon: Icon(keyboardEnabled ? Icons.check_circle : Icons.settings),
+            label: Text(keyboardEnabled
+                ? l10n.playgroundKeyboardEnabled
+                : l10n.onboardingEnableKeyboard),
           ),
+          const SizedBox(height: 8),
           Text(l10n.onboardingSubtitle4,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),

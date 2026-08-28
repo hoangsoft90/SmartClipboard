@@ -139,13 +139,11 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
               trailing: keyboardEnabled
                   ? null
                   : TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.playgroundKeyboardPhase0),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
+                      onPressed: () async {
+                        // Open system keyboard settings
+                        await ref.read(nativeBridgeProvider).openKeyboardSettings();
+                        // Re-check status after returning
+                        ref.invalidate(keyboardEnabledProvider);
                       },
                       child: Text(l10n.btnEnable),
                     ),

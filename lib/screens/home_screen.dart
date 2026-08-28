@@ -200,7 +200,10 @@ class _KeyboardEnableBanner extends ConsumerWidget {
                       icon: const Icon(Icons.close, size: 18),
                       onPressed: onDismiss,
                     ),
-                    onTap: onDismiss),
+                    onTap: () async {
+                      await ref.read(nativeBridgeProvider).openKeyboardSettings();
+                      ref.invalidate(keyboardEnabledProvider);
+                    }),
               ),
             ),
     );
