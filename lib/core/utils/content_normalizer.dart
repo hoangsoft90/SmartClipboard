@@ -109,11 +109,10 @@ String _composeNfcApproximate(String input) {
     final unit = String.fromCharCode(ch);
     if (_isCombiningMark(ch) && sb.isNotEmpty) {
       // FIX 2.3: Lấy ký tự cuối buffer và kiểm tra compose
-      final composed = _compositionMap['${sb.toString().last}$unit'];
+      final currentStr = sb.toString();
+      final composed = _compositionMap['${currentStr[currentStr.length - 1]}$unit'];
       if (composed != null) {
         // FIX 2.3: Xóa base char vừa ghi rồi ghi composed vào
-        // StringBuffer không có deleteCharAt → dùng String rồi write lại
-        final currentStr = sb.toString();
         sb.clear();
         sb.write(currentStr.substring(0, currentStr.length - 1));
         sb.write(composed);
