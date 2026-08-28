@@ -111,6 +111,7 @@ const Map<String, String> appStringsEn = {
   'exportPassphraseTooShort': 'Passphrase must be at least 8 characters.',
   'exportSuccess': 'Exported: {path}',
   'exportFailed': 'Export failed. Please try again.',
+  'exportInProgress': 'Exporting... Please wait.',
   'restoreDialogTitle': 'Restore from backup',
   'restoreDialogPathLabel': 'Backup file path (.scbak)',
   'restoreDialogPathHelper':
@@ -121,6 +122,7 @@ const Map<String, String> appStringsEn = {
   'restorePathEmpty': 'Please enter backup file path.',
   'restoreSuccess': 'Restore successful!',
   'restoreFailed': 'Restore failed. Check file/passphrase.',
+  'restoreInProgress': 'Restoring... Do not close this dialog.',
   'statsSnippetsCreated': 'Snippets created',
   'statsExpansions': 'Expansions',
   'statsClipboardSaved': 'Clipboard saved',

@@ -166,6 +166,7 @@ class AppLocalizations {
   String exportSuccess(String path) =>
       _t('exportSuccess', {'path': path});
   String get exportFailed => _t('exportFailed');
+  String get exportInProgress => _t('exportInProgress');
 
   String get restoreDialogTitle => _t('restoreDialogTitle');
   String get restoreDialogPathLabel => _t('restoreDialogPathLabel');
@@ -176,6 +177,7 @@ class AppLocalizations {
   String get restorePathEmpty => _t('restorePathEmpty');
   String get restoreSuccess => _t('restoreSuccess');
   String get restoreFailed => _t('restoreFailed');
+  String get restoreInProgress => _t('restoreInProgress');
 
   // ---- Stats ----
   String get statsSnippetsCreated => _t('statsSnippetsCreated');

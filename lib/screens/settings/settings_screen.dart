@@ -135,120 +135,63 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _exportDialog() async {
     final l10n = AppLocalizations.of(context);
     final passController = TextEditingController();
-    final confirmed = await showDialog<String>(
+    if (!mounted) return;
+
+    await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.exportDialogPassphraseTitle),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-            controller: passController,
-            obscureText: true,
-            autofocus: true,
-            decoration: InputDecoration(labelText: l10n.exportDialogPassphraseLabel),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.exportDialogPassphraseWarning,
-            style: const TextStyle(fontSize: 12),
-          ),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: Text(l10n.btnCancel)),
-          FilledButton(
-            onPressed: () {
-              if (passController.text.length < 8) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text(l10n.exportPassphraseTooShort)),
-                );
-                return;
-              }
-              Navigator.pop(ctx, passController.text);
-            },
-            child: Text(l10n.btnExport),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (ctx) => _ExportRestoreDialog(
+        l10n: l10n,
+        passController: passController,
+        onExport: (passphrase) async {
+          try {
+            final path =
+                await ref.read(backupServiceProvider).exportTo(passphrase);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(l10n.exportSuccess(path)),
+                  duration: const Duration(seconds: 6)));
+            }
+            return null; // success
+          } on BackupException catch (e) {
+            return e.message;
+          } catch (_) {
+            return l10n.exportFailed;
+          }
+        },
       ),
     );
-
-    if (confirmed == null || !mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final path = await ref.read(backupServiceProvider).exportTo(confirmed);
-      messenger.showSnackBar(SnackBar(
-          content: Text(l10n.exportSuccess(path)),
-          duration: const Duration(seconds: 6)));
-    } on BackupException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (_) {
-      messenger.showSnackBar(SnackBar(content: Text(l10n.exportFailed)));
-    }
   }
 
   Future<void> _restoreDialog() async {
     final l10n = AppLocalizations.of(context);
-    final passController = TextEditingController();
-    final pathController = TextEditingController();
-    showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.restoreDialogTitle),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(
-            controller: pathController,
-            decoration: InputDecoration(
-                labelText: l10n.restoreDialogPathLabel,
-                helperText: l10n.restoreDialogPathHelper),
-          ),
-          TextField(
-            controller: passController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.restoreDialogPassphraseLabel),
-          ),
-          const SizedBox(height: 8),
-          Text(l10n.restoreDialogWarning,
-              style: const TextStyle(fontSize: 12)),
-        ]),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: Text(l10n.btnCancel)),
-          FilledButton(
-            onPressed: () {
-              if (pathController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text(l10n.restorePathEmpty)),
-                );
-                return;
-              }
-              Navigator.pop(ctx,
-                  [pathController.text.trim(), passController.text]);
-            },
-            child: Text(l10n.btnRestore),
-          ),
-        ],
-      ),
-    ).then((combined) async {
-      if (combined == null || !mounted) return;
-      final parts = combined as List<String>?;
-      if (parts == null || parts.length != 2 || parts[0].isEmpty) return;
+    if (!mounted) return;
 
-      final messenger = ScaffoldMessenger.of(context);
-      try {
-        await ref
-            .read(backupServiceProvider)
-            .restoreFrom(parts[0], parts[1]);
-        await ref.read(cacheSyncProvider).regenerateSnippetCache();
-        await ref.read(clipboardListProvider.notifier).reload();
-        await ref.read(snippetListProvider.notifier).reload();
-        await ref.read(folderListProvider.notifier).reload();
-        messenger.showSnackBar(SnackBar(content: Text(l10n.restoreSuccess)));
-      } on BackupException catch (e) {
-        messenger.showSnackBar(SnackBar(content: Text(e.message)));
-      } catch (_) {
-        messenger.showSnackBar(SnackBar(content: Text(l10n.restoreFailed)));
-      }
-    });
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _RestoreRestoreDialog(
+        l10n: l10n,
+        onRestore: (path, passphrase) async {
+          try {
+            await ref.read(backupServiceProvider).restoreFrom(path, passphrase);
+            await ref.read(cacheSyncProvider).regenerateSnippetCache();
+            await ref.read(clipboardListProvider.notifier).reload();
+            await ref.read(snippetListProvider.notifier).reload();
+            await ref.read(folderListProvider.notifier).reload();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.restoreSuccess)));
+            }
+            return null; // success
+          } on BackupException catch (e) {
+            return e.message;
+          } catch (_) {
+            return l10n.restoreFailed;
+          }
+        },
+      ),
+    );
   }
 }
 
@@ -316,4 +259,208 @@ class _MetricsSummary extends ConsumerWidget {
         label: Text(label, style: const TextStyle(fontSize: 11)),
         visualDensity: VisualDensity.compact,
       );
+}
+
+// ------------------------------------------------------------------
+// Export Dialog — Stateful để quản lý loading + error inline
+// ------------------------------------------------------------------
+class _ExportRestoreDialog extends StatefulWidget {
+  final AppLocalizations l10n;
+  final TextEditingController passController;
+  final Future<String?> Function(String passphrase) onExport;
+
+  const _ExportRestoreDialog({
+    required this.l10n,
+    required this.passController,
+    required this.onExport,
+  });
+
+  @override
+  State<_ExportRestoreDialog> createState() => _ExportRestoreDialogState();
+}
+
+class _ExportRestoreDialogState extends State<_ExportRestoreDialog> {
+  bool _loading = false;
+  String? _error;
+
+  Future<void> _doExport() async {
+    final pass = widget.passController.text;
+    if (pass.length < 8) {
+      setState(() => _error = widget.l10n.exportPassphraseTooShort);
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    final error = await widget.onExport(pass);
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return AlertDialog(
+      title: Text(l10n.exportDialogPassphraseTitle),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(
+          controller: widget.passController,
+          obscureText: true,
+          autofocus: true,
+          enabled: !_loading,
+          decoration:
+              InputDecoration(labelText: l10n.exportDialogPassphraseLabel),
+        ),
+        const SizedBox(height: 8),
+        Text(l10n.exportDialogPassphraseWarning,
+            style: const TextStyle(fontSize: 12)),
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(_error!,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.error, fontSize: 13)),
+        ],
+        if (_loading) ...[
+          const SizedBox(height: 16),
+          const LinearProgressIndicator(),
+          const SizedBox(height: 8),
+          Text(l10n.exportInProgress, style: const TextStyle(fontSize: 12)),
+        ],
+      ]),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.pop(context),
+          child: Text(l10n.btnCancel),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _doExport,
+          child: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(l10n.btnExport),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// Restore Dialog — Stateful: validate path + loading + error inline
+// ------------------------------------------------------------------
+class _RestoreRestoreDialog extends StatefulWidget {
+  final AppLocalizations l10n;
+  final Future<String?> Function(String path, String passphrase) onRestore;
+
+  const _RestoreRestoreDialog({
+    required this.l10n,
+    required this.onRestore,
+  });
+
+  @override
+  State<_RestoreRestoreDialog> createState() => _RestoreRestoreDialogState();
+}
+
+class _RestoreRestoreDialogState extends State<_RestoreRestoreDialog> {
+  final _passController = TextEditingController();
+  final _pathController = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _passController.dispose();
+    _pathController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _doRestore() async {
+    final path = _pathController.text.trim();
+    final pass = _passController.text;
+
+    // Validate ngay — KHÔNG dismiss dialog nếu path rỗng
+    if (path.isEmpty) {
+      setState(() => _error = widget.l10n.restorePathEmpty);
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    final error = await widget.onRestore(path, pass);
+    if (!mounted) return;
+    if (error == null) {
+      Navigator.of(context).pop();
+    } else {
+      setState(() {
+        _loading = false;
+        _error = error;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = widget.l10n;
+    return AlertDialog(
+      title: Text(l10n.restoreDialogTitle),
+      content: Column(mainAxisSize: MainAxisSize.min, children: [
+        TextField(
+          controller: _pathController,
+          enabled: !_loading,
+          decoration: InputDecoration(
+              labelText: l10n.restoreDialogPathLabel,
+              helperText: l10n.restoreDialogPathHelper),
+        ),
+        TextField(
+          controller: _passController,
+          obscureText: true,
+          enabled: !_loading,
+          decoration:
+              InputDecoration(labelText: l10n.restoreDialogPassphraseLabel),
+        ),
+        const SizedBox(height: 8),
+        Text(l10n.restoreDialogWarning,
+            style: const TextStyle(fontSize: 12)),
+        if (_error != null) ...[
+          const SizedBox(height: 8),
+          Text(_error!,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.error, fontSize: 13)),
+        ],
+        if (_loading) ...[
+          const SizedBox(height: 16),
+          const LinearProgressIndicator(),
+          const SizedBox(height: 8),
+          Text(l10n.restoreInProgress, style: const TextStyle(fontSize: 12)),
+        ],
+      ]),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.pop(context),
+          child: Text(l10n.btnCancel),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _doRestore,
+          child: _loading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(l10n.btnRestore),
+        ),
+      ],
+    );
+  }
 }

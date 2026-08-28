@@ -110,6 +110,7 @@ const Map<String, String> appStringsVi = {
   'exportPassphraseTooShort': 'Passphrase phải có ít nhất 8 ký tự.',
   'exportSuccess': 'Đã export: {path}',
   'exportFailed': 'Export thất bại. Vui lòng thử lại.',
+  'exportInProgress': 'Đang export... Vui lòng chờ.',
   'restoreDialogTitle': 'Restore từ backup',
   'restoreDialogPathLabel': 'Đường dẫn file .scbak',
   'restoreDialogPathHelper':
@@ -120,6 +121,7 @@ const Map<String, String> appStringsVi = {
   'restorePathEmpty': 'Vui lòng nhập đường dẫn file backup.',
   'restoreSuccess': 'Restore thành công!',
   'restoreFailed': 'Restore thất bại. Kiểm tra lại file/passphrase.',
+  'restoreInProgress': 'Đang khôi phục... Không đóng hộp thoại này.',
   'statsSnippetsCreated': 'Snippets đã tạo',
   'statsExpansions': 'Lần mở rộng',
   'statsClipboardSaved': 'Clipboard đã lưu',
