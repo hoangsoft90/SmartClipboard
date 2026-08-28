@@ -31,7 +31,7 @@ void main() {
       service = ClipboardService(
         repo: repo,
         meta: meta,  // FIX: MetaDao, không phải Database
-        metrics: MetricsService(db),
+        metrics: MetricsService(meta),  // FIX: MetricsService expects MetaDao
         privacy: PrivacyService(),
       );
     });
