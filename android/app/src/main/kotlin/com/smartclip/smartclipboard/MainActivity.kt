@@ -10,26 +10,49 @@ import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.PluginRegistry
 
 /**
  * MainActivity — handles MethodChannel for:
  * 1. Keyboard IME integration
- * 2. FIX 3.2: SAF File Picker for Restore
- * 3. FIX 3.2: Share Sheet for Export
+ * 2. SAF File Picker for Restore
+ * 3. Share Sheet for Export
  *
  * FIX 1.1: Kế thừa FlutterFragmentActivity thay vì FlutterActivity
  * để local_auth (biometric) plugin hoạt động đúng.
  */
-class MainActivity : FlutterFragmentActivity(), PluginRegistry.ActivityResultListener {
+class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         private const val CHANNEL = "smart_clipboard/native_bridge"
         private const val IME_PACKAGE = "com.smartclip.smartclipboard"
-        private const val REQUEST_CODE_PICK_FILE = 1001
     }
 
     private var filePickerResult: MethodChannel.Result? = null
+
+    // FIX: Use ActivityResultLauncher instead of onActivityResult
+    private lateinit var filePickerLauncher: ActivityResultLauncher<Intent>
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        // Register activity result launcher BEFORE configureFlutterEngine
+        filePickerLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val uri = result.data?.data
+                if (uri != null) {
+                    filePickerResult?.success(uri.toString())
+                } else {
+                    filePickerResult?.success(null)
+                }
+            } else {
+                // User cancelled
+                filePickerResult?.success(null)
+            }
+            filePickerResult = null
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -44,11 +67,11 @@ class MainActivity : FlutterFragmentActivity(), PluginRegistry.ActivityResultLis
                         openInputMethodSettings()
                         result.success(null)
                     }
-                    // FIX 3.2: Mở SAF File Picker để chọn file .scbak
+                    // SAF File Picker for Restore
                     "pickBackupFile" -> {
                         pickBackupFile(result)
                     }
-                    // FIX 3.2: Mở Share Sheet để export file
+                    // Share Sheet for Export
                     "shareFile" -> {
                         val path = call.arguments as? String
                         if (path != null) {
@@ -64,45 +87,20 @@ class MainActivity : FlutterFragmentActivity(), PluginRegistry.ActivityResultLis
     }
 
     // ===========================================================================
-    // FIX 3.2: SAF File Picker
+    // SAF File Picker
     // ===========================================================================
 
     private fun pickBackupFile(result: MethodChannel.Result) {
         filePickerResult = result
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
-            type = "*/*" // Chọn bất kỳ file nào (SAF không filter theo extension tốt)
-            // Có thể thêm MIME type nếu cần: type = "application/octet-stream"
+            type = "*/*"
         }
-        startActivityForResult(intent, REQUEST_CODE_PICK_FILE)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-
-        if (requestCode == REQUEST_CODE_PICK_FILE) {
-            if (resultCode == Activity.RESULT_OK && data?.data != null) {
-                // Lấy đường dẫn thực tế từ content URI
-                val uri = data.data!!
-                // Chuyển content:// URI thành đường dẫn file thực
-                val path = getPathFromUri(uri)
-                filePickerResult?.success(path)
-            } else {
-                // User hủy chọn file
-                filePickerResult?.success(null)
-            }
-            filePickerResult = null
-        }
-    }
-
-    private fun getPathFromUri(uri: android.net.Uri): String {
-        // Với SAF, uri là content:// URI. Cần copy file ra cache để đọc.
-        // Trả về URI string để Dart side xử lý.
-        return uri.toString()
+        filePickerLauncher.launch(intent)
     }
 
     // ===========================================================================
-    // FIX 3.2: Share Sheet for Export
+    // Share Sheet for Export
     // ===========================================================================
 
     private fun shareFile(filePath: String) {
@@ -129,8 +127,6 @@ class MainActivity : FlutterFragmentActivity(), PluginRegistry.ActivityResultLis
 
     /**
      * Check if SmartClipboard IME is enabled in system settings.
-     * Uses InputMethodManager.getEnabledInputMethodList() to check
-     * if our package is in the enabled list.
      */
     private fun isSmartClipboardKeyboardEnabled(): Boolean {
         return try {
@@ -152,7 +148,7 @@ class MainActivity : FlutterFragmentActivity(), PluginRegistry.ActivityResultLis
             }
             startActivity(intent)
         } catch (_: Exception) {
-            // Best-effort — silently fail
+            // Best-effort
         }
     }
 }
