@@ -99,15 +99,23 @@ bool _isCombiningMark(int codeUnit) => codeUnit >= 0x0300 && codeUnit <= 0x036F;
 /// Compose chuỗi decomposed (NFD) về dạng precomposed (NFC) xấp xỉ.
 /// Chạy trái→phải: nếu ký tự hiện tại là combining mark và cặp
 /// [ký tự trước] + [mark] có trong bảng → ghép lại.
+/// FIX 2.3: Compose chuỗi decomposed (NFD) về dạng precomposed (NFC) xấp xỉ.
+/// Chạy trái→phải: nếu ký tự hiện tại là combining mark và cặp
+/// [ký tự trước] + [mark] có trong bảng → xóa base char rồi ghi composed.
 String _composeNfcApproximate(String input) {
   if (!input.contains(RegExp(r'[\u0300-\u036F]'))) return input;
   final sb = StringBuffer();
   for (final ch in input.runes) {
     final unit = String.fromCharCode(ch);
     if (_isCombiningMark(ch) && sb.isNotEmpty) {
-      final prev = sb.toString().substring(sb.length - 1);
-      final composed = _compositionMap['$prev$unit'];
+      // FIX 2.3: Lấy ký tự cuối buffer và kiểm tra compose
+      final composed = _compositionMap['${sb.toString().last}$unit'];
       if (composed != null) {
+        // FIX 2.3: Xóa base char vừa ghi rồi ghi composed vào
+        // StringBuffer không có deleteCharAt → dùng String rồi write lại
+        final currentStr = sb.toString();
+        sb.clear();
+        sb.write(currentStr.substring(0, currentStr.length - 1));
         sb.write(composed);
         continue;
       }

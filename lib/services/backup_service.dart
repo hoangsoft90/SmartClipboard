@@ -42,7 +42,8 @@ class BackupService {
     });
 
     final salt = _randomBytes(saltBytes);
-    final key = _deriveKey(passphrase, salt);
+    // FIX 2.2: Await vì _deriveKey giờ chạy trên background isolate
+    final key = await _deriveKey(passphrase, salt);
     // GCM nonce ngẫu nhiên mỗi lần export — không tái sử dụng (Rule 12).
     final iv = enc.IV.fromSecureRandom(gcmNonceBytes);
     final encrypter =
@@ -98,7 +99,8 @@ class BackupService {
     final nonce = base64Decode(envelope['nonce'] as String);
     final ciphertext = base64Decode(envelope['ciphertext'] as String);
 
-    final key = _deriveKey(passphrase, salt);
+    // FIX 2.2: Await vì _deriveKey giờ chạy trên background isolate
+    final key = await _deriveKey(passphrase, salt);
     final encrypter =
         enc.Encrypter(enc.AES(enc.Key(key), mode: enc.AESMode.gcm));
     String payloadText;
@@ -131,19 +133,39 @@ class BackupService {
     });
   }
 
-  Uint8List _deriveKey(String passphrase, Uint8List salt) =>
-      pbkdf2HmacSha256(
-        password: passphrase,
-        salt: salt,
-        iterations: kdfIterations,
-        keyLengthBytes: 32,
-      );
+  // FIX 2.2: Offload PBKDF2 ra background isolate để tránh ANR.
+  // compute() chạy hàm trên isolate riêng, giữ Main Isolate mượt.
+  Future<Uint8List> _deriveKey(String passphrase, Uint8List salt) async {
+    return compute(_deriveKeySync, _KeyDerivationParams(passphrase, salt, kdfIterations));
+  }
 
   Uint8List _randomBytes(int length) {
     final rand = Random.secure();
     return Uint8List.fromList(
         List.generate(length, (_) => rand.nextInt(256)));
   }
+}
+
+// ===========================================================================
+// FIX 2.2: Top-level function cho compute() — PHẢI là top-level hoặc static
+// ===========================================================================
+
+class _KeyDerivationParams {
+  final String passphrase;
+  final Uint8List salt;
+  final int iterations;
+  _KeyDerivationParams(this.passphrase, this.salt, this.iterations);
+}
+
+/// Top-level function chạy trên background isolate.
+/// compute() chỉ接受 top-level function hoặc static method.
+Uint8List _deriveKeySync(_KeyDerivationParams params) {
+  return pbkdf2HmacSha256(
+    password: params.passphrase,
+    salt: params.salt,
+    iterations: params.iterations,
+    keyLengthBytes: 32,
+  );
 }
 
 class BackupException implements Exception {

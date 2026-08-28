@@ -13,7 +13,8 @@ class LockGate extends ConsumerStatefulWidget {
   ConsumerState<LockGate> createState() => _LockGateState();
 }
 
-class _LockGateState extends ConsumerState<LockGate> {
+class _LockGateState extends ConsumerState<LockGate>
+    with WidgetsBindingObserver {
   bool _unlocked = false;
   bool _authenticating = false;
 
@@ -36,7 +37,30 @@ class _LockGateState extends ConsumerState<LockGate> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _authenticate());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // FIX 2.1: Reset unlock state khi app chuyển sang background.
+  // Khi resumed → bắt buộc authenticate lại.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // App vào background → reset unlock state
+      if (mounted) {
+        setState(() {
+          _unlocked = false;
+          _authenticating = false;
+        });
+      }
+    }
   }
 
   @override

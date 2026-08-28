@@ -1,12 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- ====================================================================
-         INTERNET permission — BẮT BUỘC cho Share Sheet Integration (mục 6.2),
-         không dùng cho ads/analytics/BaaS. Chỉ để nhận shared content từ app khác.
-    ==================================================================== -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- FIX 2.4: Xóa INTERNET + ACCESS_NETWORK_STATE — KHÔNG cần cho Phase 0.
+         App là 100% Local-first, không dùng network. Nếu cần trong tương lai
+         (IAP, analytics), thêm lại khi thực sự cần.
+    -->
 
     <!-- Biometric permission (local_auth plugin) -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -20,8 +18,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:networkSecurityConfig="@xml/network_security_config"
-        android:usesCleartextTraffic="true"
+        <!-- FIX 2.4: Xóa usesCleartextTraffic — không cần cho local-first app -->
         tools:targetApi="31">
 
         <activity
