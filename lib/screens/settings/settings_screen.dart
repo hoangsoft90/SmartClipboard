@@ -147,6 +147,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           try {
             final path =
                 await ref.read(backupServiceProvider).exportTo(passphrase);
+            // FIX 3.2: Mở Share Sheet để user lưu file ra chỗ tùy chọn
+            await ref.read(nativeBridgeProvider).shareFile(path);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                   content: Text(l10n.exportSuccess(path)),
@@ -167,11 +169,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final l10n = AppLocalizations.of(context);
     if (!mounted) return;
 
+    // FIX 3.2: Mở SAF File Picker trước khi hiện dialog
+    final pickedPath = await ref.read(nativeBridgeProvider).pickBackupFile();
+    if (pickedPath == null) return; // User hủy
+
+    if (!mounted) return;
+
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => _RestoreBackupDialog(
         l10n: l10n,
+        initialPath: pickedPath, // FIX 3.2: Điền sẵn path từ file picker
         onRestore: (path, passphrase) async {
           try {
             await ref.read(backupServiceProvider).restoreFrom(path, passphrase);
@@ -359,10 +368,12 @@ class _ExportRestoreDialogState extends State<_ExportRestoreDialog> {
 // ------------------------------------------------------------------
 class _RestoreBackupDialog extends StatefulWidget {
   final AppLocalizations l10n;
+  final String? initialPath; // FIX 3.2: Path từ SAF File Picker
   final Future<String?> Function(String path, String passphrase) onRestore;
 
   const _RestoreBackupDialog({
     required this.l10n,
+    this.initialPath,
     required this.onRestore,
   });
 
@@ -372,9 +383,16 @@ class _RestoreBackupDialog extends StatefulWidget {
 
 class _RestoreBackupDialogState extends State<_RestoreBackupDialog> {
   final _passController = TextEditingController();
-  final _pathController = TextEditingController();
+  late final TextEditingController _pathController;
   bool _loading = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    // FIX 3.2: Điền sẵn path từ SAF File Picker
+    _pathController = TextEditingController(text: widget.initialPath ?? '');
+  }
 
   @override
   void dispose() {

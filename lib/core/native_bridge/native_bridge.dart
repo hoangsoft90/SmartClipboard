@@ -36,15 +36,47 @@ class NativeBridge {
   }
 
   /// Mở trang cài đặt bàn phím hệ thống Android.
-  /// Phase 0: no-op stub. Web: no-op.
   Future<void> openKeyboardSettings() async {
     if (!_isSupported) return;
     try {
       await _channel.invokeMethod('openKeyboardSettings');
     } on MissingPluginException {
-      // Phase 0: chưa có native side — no-op.
+      // No-op nếu native side chưa tồn tại.
     } on PlatformException {
-      // Im lặng: banner CTA là best-effort, không phá UX.
+      // Best-effort.
+    }
+  }
+
+  // ===========================================================================
+  // FIX 3.2: SAF File Picker for Restore
+  // ===========================================================================
+
+  /// Mở SAF File Picker để user chọn file .scbak.
+  /// Trả về đường dẫn file đã chọn, hoặc null nếu user hủy.
+  Future<String?> pickBackupFile() async {
+    if (!_isSupported) return null;
+    try {
+      return await _channel.invokeMethod<String>('pickBackupFile');
+    } on MissingPluginException {
+      return null;
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  // ===========================================================================
+  // FIX 3.2: Share Sheet for Export
+  // ===========================================================================
+
+  /// Mở Android Share Sheet để user chia sẻ file backup.
+  Future<void> shareFile(String filePath) async {
+    if (!_isSupported) return;
+    try {
+      await _channel.invokeMethod('shareFile', filePath);
+    } on MissingPluginException {
+      // No-op.
+    } on PlatformException {
+      // Best-effort.
     }
   }
 }

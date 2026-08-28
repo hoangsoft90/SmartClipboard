@@ -23,12 +23,16 @@ class ProUpgradeBanner extends ConsumerWidget {
           child: ListTile(
             dense: true,
             leading: const Icon(Icons.workspace_premium),
+            // FIX 3.3: Hiển thị rõ ràng hơn lý do items bị ẩn
             title: Text(
-              '$total mục đang bị ẩn do giới hạn bản Free',
+              '$total mục đã bị ẩn tự động',
               style: const TextStyle(fontSize: 13),
             ),
-            subtitle: Text(l10n.proUpgradeSubtitle,
-                style: const TextStyle(fontSize: 11)),
+            subtitle: Text(
+              'Giới hạn bản Free: 50 clipboard + 15 snippet. '
+              'Dữ liệu được giữ an toàn, nâng cấp Pro để mở khoá.',
+              style: const TextStyle(fontSize: 11),
+            ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => showDialog<void>(
               context: context,

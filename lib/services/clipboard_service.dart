@@ -82,6 +82,9 @@ class ClipboardService {
       return;
     }
 
+    // FIX 3.3: Auto-expiration CHỈ áp dụng cho items MỚI (INSERT).
+    // Items đã lưu trước đó giữ nguyên expiration — không bị ảnh hưởng
+    // khi user thay đổi setting Auto-Expiration.
     final expirationDays = await meta.getInt('expiration_days',
         fallback: AppLimits.expirationOptionsDays.last);
     final result = await repo.save(

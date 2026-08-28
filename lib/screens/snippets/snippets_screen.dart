@@ -5,6 +5,7 @@ import '../../generated/l10n/app_localizations.dart';
 import '../../models/snippet.dart';
 import '../../state/providers.dart';
 import '../../widgets/save_snippet_dialog.dart';
+import 'folders_screen.dart';
 import 'snippet_edit_screen.dart';
 
 class SnippetsScreen extends ConsumerWidget {
@@ -16,7 +17,20 @@ class SnippetsScreen extends ConsumerWidget {
     final listAsync = ref.watch(snippetListProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.snippetsTitle)),
+      appBar: AppBar(
+        title: Text(l10n.snippetsTitle),
+        // FIX 3.1: Thêm nút truy cập FoldersScreen
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.folder_outlined),
+            tooltip: l10n.foldersTitle,
+            onPressed: () {
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const FoldersScreen()));
+            },
+          ),
+        ],
+      ),
       body: listAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(l10n.clipboardLoadError)),
