@@ -178,6 +178,17 @@ class SmartKeyboardView(context: Context) : View(context) {
         } else null
     }
 
+    /**
+     * BUG 1 FIX: Unified label display — returns key with label adjusted
+     * for current Shift state. Used by drawRow, drawRowCentered, drawRow3
+     * for BOTH canvas drawing AND keyRects (so preview popup also reflects Shift).
+     */
+    private fun displayLabel(key: Key): Key {
+        if (key.isSpecial || key.label.length != 1 || !key.label[0].isLetter()) return key
+        val display = if (isShifted) key.label.uppercase() else key.label.lowercase()
+        return key.copy(label = display)
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val scale = resources.displayMetrics.density
         val mh = (keyHeight * scale).toInt()
@@ -220,7 +231,7 @@ class SmartKeyboardView(context: Context) : View(context) {
             y += mh + mm
             drawRow(canvas, symbolRow2, y, w, mp, mm, mh, scale)
             y += mh + mm
-            drawRowCentered(canvas, symbolRow3, y, w, mp, mm, mh, scale)
+            drawSymbolRow3(canvas, y, w, mp, mm, mh, scale)   // BUG 2 FIX: Backspace on symbol row 3
             y += mh + mm
             drawSymbolRow4(canvas, y, w, mp, mm, mh, scale)
         }
@@ -235,9 +246,10 @@ class SmartKeyboardView(context: Context) : View(context) {
         var x = pad.toFloat()
 
         for (key in keys) {
+            val displayKey = displayLabel(key)   // BUG 1 FIX: use unified helper
             val rect = Rect(x.toInt(), y.toInt(), x.toInt() + keyWidth, y.toInt() + height)
-            drawKey(canvas, rect, key, scale)
-            keyRects.add(KeyRect(rect, key))
+            drawKey(canvas, rect, displayKey, scale)
+            keyRects.add(KeyRect(rect, displayKey))   // BUG 1 FIX: save displayKey for preview
             x += keyWidth + margin
         }
     }
@@ -251,9 +263,10 @@ class SmartKeyboardView(context: Context) : View(context) {
         var x = pad + keyWidth / 2.toFloat()
 
         for (key in keys) {
+            val displayKey = displayLabel(key)   // BUG 1 FIX: use unified helper
             val rect = Rect(x.toInt(), y.toInt(), x.toInt() + keyWidth, y.toInt() + height)
-            drawKey(canvas, rect, key, scale)
-            keyRects.add(KeyRect(rect, key))
+            drawKey(canvas, rect, displayKey, scale)
+            keyRects.add(KeyRect(rect, displayKey))   // BUG 1 FIX: save displayKey for preview
             x += keyWidth + margin
         }
     }
@@ -277,11 +290,10 @@ class SmartKeyboardView(context: Context) : View(context) {
 
         // Letters
         for (key in row3Base) {
-            val ch = if (isShifted) key.label.uppercase() else key.label
-            val displayKey = key.copy(label = ch)
+            val displayKey = displayLabel(key)   // BUG 1 FIX: use unified helper
             val rect = Rect(x.toInt(), y.toInt(), x.toInt() + letterWidth, y.toInt() + height)
             drawKey(canvas, rect, displayKey, scale)
-            keyRects.add(KeyRect(rect, key))
+            keyRects.add(KeyRect(rect, displayKey))   // BUG 1 FIX: save displayKey for preview
             x += letterWidth + margin
         }
 
@@ -330,6 +342,34 @@ class SmartKeyboardView(context: Context) : View(context) {
         val bsRect = Rect(x.toInt(), y.toInt(), x.toInt() + specialWidth, y.toInt() + height)
         drawKey(canvas, bsRect, row4[4], scale)
         keyRects.add(KeyRect(bsRect, row4[4]))
+    }
+
+    /**
+     * BUG 2 FIX: Symbol row 3 with Backspace at right end.
+     * Layout: ! " ' : ; / ? [⌫]
+     * Backspace uses keyCode -1 — same as LETTERS layer, handled by
+     * existing onKeyPressed(-1) in SmartClipboardIME.
+     */
+    private fun drawSymbolRow3(
+        canvas: Canvas, y: Float, totalWidth: Float,
+        pad: Int, margin: Int, height: Int, scale: Float
+    ) {
+        val backspaceKey = Key("⌫", -1, true)
+        val specialWidth = (60 * scale).toInt()
+        val symWidth = ((totalWidth - 2 * pad - margin - specialWidth) / symbolRow3.size).toInt()
+
+        var x = pad.toFloat()
+        for (key in symbolRow3) {
+            val rect = Rect(x.toInt(), y.toInt(), x.toInt() + symWidth, y.toInt() + height)
+            drawKey(canvas, rect, key, scale)
+            keyRects.add(KeyRect(rect, key))
+            x += symWidth + margin
+        }
+
+        // Backspace — right end, same row as symbols
+        val bsRect = Rect(x.toInt(), y.toInt(), x.toInt() + specialWidth, y.toInt() + height)
+        drawKey(canvas, bsRect, backspaceKey, scale)
+        keyRects.add(KeyRect(bsRect, backspaceKey))
     }
 
     private fun drawSymbolRow4(

@@ -10,6 +10,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -247,9 +248,19 @@ class SmartClipboardIME : InputMethodService() {
 
                 // Phase 4D.4: Vietnamese Telex mode
                 if (currentLanguage == InputLanguage.VI && ch.length == 1 && ch[0].isLetter()) {
+                    // BUG 3 FIX: if there's a selection, delete it before starting
+                    // composing — setComposingText does NOT auto-replace selection
+                    // like commitText does.
+                    val selected = ic.getSelectedText(0)
+                    if (!selected.isNullOrEmpty()) {
+                        ic.commitText("", 1)
+                        typingBuffer.clear()
+                    }
                     // Ensure telex processor exists
                     if (telexProcessor == null) {
                         telexProcessor = VietnameseTelexProcessor()
+                    } else {
+                        telexProcessor!!.reset()   // clean state if we just cleared selection
                     }
                     val composingText = telexProcessor!!.onChar(ch[0])
                     typingBuffer.append(ch)
@@ -348,6 +359,20 @@ class SmartClipboardIME : InputMethodService() {
     }
 
     private fun handleBackspace(ic: InputConnection) {
+        // BUG 3 FIX: if there's a selection, delete the entire selection first.
+        // deleteSurroundingText does NOT handle selection — it always operates
+        // around the cursor / start of selection, leaving selected text intact.
+        val selected = ic.getSelectedText(0)
+        if (!selected.isNullOrEmpty()) {
+            ic.commitText("", 1)
+            typingBuffer.clear()
+            telexProcessor?.reset()
+            lastCommittedChar = null
+            lastWasSpace = false
+            updateSuggestions("")
+            return
+        }
+
         // Phase 4D.4: Vietnamese Telex backspace
         if (currentLanguage == InputLanguage.VI && telexProcessor != null && !telexProcessor!!.isEmpty()) {
             val composingText = telexProcessor!!.onBackspace()
@@ -411,6 +436,11 @@ class SmartClipboardIME : InputMethodService() {
                 telexProcessor?.reset()
                 typingBuffer.clear()
                 updateSuggestions("")
+            }
+            "SWITCH_KEYBOARD" -> {
+                // HANG MUC 4: Open system input method picker
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showInputMethodPicker()
             }
         }
     }
@@ -694,6 +724,24 @@ class QuickToolbar(context: Context, private val onShortcut: (String) -> Unit) :
             setOnClickListener { onShortcut("EMOJI") }
         }
         addView(emojiBtn)
+
+        // HANG MUC 4: Switch keyboard button
+        val switchDivider = View(context).apply {
+            layoutParams = LayoutParams(1, LayoutParams.MATCH_PARENT).apply {
+                setMargins(4, 8, 4, 8)
+            }
+            setBackgroundColor(0xFFCCCCCC.toInt())
+        }
+        addView(switchDivider)
+
+        val switchKeyboardBtn = TextView(context).apply {
+            text = "🌐"
+            setPadding(20, 8, 20, 8)
+            textSize = 18f
+            setBackgroundColor(0x00000000)
+            setOnClickListener { onShortcut("SWITCH_KEYBOARD") }
+        }
+        addView(switchKeyboardBtn)
     }
 
     fun setLanguage(lang: String) {
