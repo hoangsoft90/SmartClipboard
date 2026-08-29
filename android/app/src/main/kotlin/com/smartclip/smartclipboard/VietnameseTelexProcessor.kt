@@ -3,32 +3,44 @@ package com.smartclip.smartclipboard
 /**
  * VietnameseTelexProcessor — Telex input engine for Vietnamese.
  *
- * Telex mapping (standard):
- *   Vowels with circumflex:  aa→â, ee→ê, oo→ô
- *   Vowels with breve/horn:  aw→ă, ow→ơ, uw→ư
- *   d with stroke:           dd→đ
- *   Tone marks (applied to last vowel of the base):
- *     s→sac(á), f→huyen(à), r→hoi(ả), x→nga(ã), j→nang(ạ)
+ * Architecture: THREE parallel lists:
+ *   1. originalInput: raw chars as typed (NEVER modified) — for triple/pair detection
+ *   2. composedChars: composed output chars (modified by pair/triple/tone)
+ *   3. composedBuffer: String view of composedChars (rebuilt on each change)
  *
- * Flow: onChar() buffers raw Latin, returns composing text with diacritics.
- *       onBackspace() removes last char from buffer.
- *       commit() finalizes the word and returns the composed string.
+ * This allows looking back at original raw input for triple detection
+ * ("uow" → "ươ") even after partial composition.
+ *
+ * Telex mapping:
+ *   Vowels: aa→â, ee→ê, oo→ô, aw→ă, ow→ơ, uw→ư
+ *   Complex: uow→ươ
+ *   dd→đ
+ *   Tones: s→sac, f→huyen, r→hoi, x→nga, j→nang
  */
 class VietnameseTelexProcessor {
 
-    private val rawBuffer = StringBuilder()
+    // Original raw input — NEVER modified, used for pair/triple detection
+    private val originalInput = mutableListOf<Char>()
 
-    // Mapping: raw lowercase sequence → composed Vietnamese char
-    private val vowelMap = mapOf(
-        "aa" to "â",
-        "ee" to "ê",
-        "oo" to "ô",
-        "aw" to "ă",
-        "ow" to "ơ",
-        "uw" to "ư",
+    // Composed output chars — modified by pair/triple/tone processing
+    private val composedChars = mutableListOf<Char>()
+
+    // String view of composedChars (rebuilt on each change)
+    private val composedBuffer = StringBuilder()
+
+    // Vowel pair mapping: 2 raw chars → composed
+    private val vowelPairs = mapOf(
+        "aa" to "â", "ee" to "ê", "oo" to "ô",
+        "aw" to "ă", "ow" to "ơ", "uw" to "ư",
+        "uo" to "ư", "oe" to "ơ",
     )
 
-    // Tone marks: letter → (base→toned mapping)
+    // Vowel triple mapping: 3 raw chars → composed
+    private val vowelTriples = mapOf(
+        "uow" to "ươ",
+    )
+
+    // Tone marks
     private val toneMap = mapOf(
         's' to mapOf('a' to 'á', 'ă' to 'ắ', 'â' to 'ấ', 'e' to 'é', 'ê' to 'ế', 'i' to 'í', 'o' to 'ó', 'ô' to 'ố', 'ơ' to 'ớ', 'u' to 'ú', 'ư' to 'ứ', 'y' to 'ý'),
         'f' to mapOf('a' to 'à', 'ă' to 'ằ', 'â' to 'ầ', 'e' to 'è', 'ê' to 'ề', 'i' to 'ì', 'o' to 'ò', 'ô' to 'ồ', 'ơ' to 'ờ', 'u' to 'ù', 'ư' to 'ừ', 'y' to 'ỳ'),
@@ -37,113 +49,124 @@ class VietnameseTelexProcessor {
         'j' to mapOf('a' to 'ạ', 'ă' to 'ặ', 'â' to 'ậ', 'e' to 'ẹ', 'ê' to 'ệ', 'i' to 'ị', 'o' to 'ọ', 'ô' to 'ộ', 'ơ' to 'ợ', 'u' to 'ụ', 'ư' to 'ự', 'y' to 'ỵ'),
     )
 
-    // Diphthongs that should not be split by vowel mapping
-    // e.g. "oa", "oe", "uy", "ua", "ia", "ua", "ieu", "oai", etc.
-    // These are handled by composing vowels in order.
-    private val diphthongs = setOf(
-        "oa", "oe", "ai", "ao", "au", "ay", "eo", "eu",
-        "ia", "ie", "iu", "oa", "oe", "oi", "oo", "ou",
-        "ua", "ue", "ui", "uo", "uy",
-        "uya",
-    )
+    private val vowels = setOf('a', 'ă', 'â', 'e', 'ê', 'i', 'o', 'ô', 'ơ', 'u', 'ư', 'y')
 
-    /** Process a single character input. Returns the composing text (with diacritics applied). */
+    /** Process a single character. Returns composing text. */
     fun onChar(c: Char): String {
         val lower = c.lowercaseChar()
 
-        // Tone marks: if last char in buffer is a vowel and this is a tone key
-        if (lower in toneMap && rawBuffer.isNotEmpty()) {
-            val lastRaw = rawBuffer.last()
-            if (lastRaw.isLetter() && lastRaw != 'd') {
+        // --- Tone marks ---
+        if (lower in toneMap && composedChars.isNotEmpty()) {
+            val lastComposed = composedChars.last()
+            if (lastComposed in vowels) {
                 val toned = toneMap[lower]
-                // Find the last vowel in the buffer to apply tone to
                 val tonedChar = findAndApplyTone(toned)
                 if (tonedChar != null) {
-                    return composeBuffer()
+                    rebuildComposedBuffer()
+                    return composedBuffer.toString()
                 }
             }
-            // If tone can't apply (e.g. on consonant), treat as normal char
         }
 
-        // Check for double-vowel → circumflex/horn mapping
-        if (rawBuffer.isNotEmpty()) {
-            val lastChar = rawBuffer.last()
-            val pair = "$lastChar$lower"
-            val mapped = vowelMap[pair]
-            if (mapped != null) {
-                // Replace last char with composed vowel
-                rawBuffer.deleteCharAt(rawBuffer.length - 1)
-                rawBuffer.append(mapped)
-                return composeBuffer()
+        // --- dd → đ ---
+        if (lower == 'd' && originalInput.isNotEmpty() && originalInput.last() == 'd' &&
+            composedChars.isNotEmpty() && composedChars.last() == 'd') {
+            composedChars.last() = 'đ'
+            rebuildComposedBuffer()
+            return composedBuffer.toString()
+        }
+
+        // --- Vowel pair/triple detection (using originalInput for lookup) ---
+        if (isVowelBase(lower) && originalInput.isNotEmpty()) {
+            val lastOriginal = originalInput.last()
+
+            // Check 3-char triple: original[-2] + original[-1] + new
+            if (originalInput.size >= 2) {
+                val origPrev2 = originalInput[originalInput.size - 2]
+                val triple = "$origPrev2$lastOriginal$lower"
+                val tripleResult = vowelTriples[triple]
+                if (tripleResult != null) {
+                    // Replace last 2 entries in composedChars with triple result
+                    // (originalInput stays as-is — it's immutable)
+                    composedChars.removeAt(composedChars.size - 1)
+                    composedChars.removeAt(composedChars.size - 1)
+                    for (ch in tripleResult) {
+                        composedChars.add(ch)
+                    }
+                    rebuildComposedBuffer()
+                    return composedBuffer.toString()
+                }
+            }
+
+            // Check 2-char pair: original[-1] + new
+            val pair = "$lastOriginal$lower"
+            val pairResult = vowelPairs[pair]
+            if (pairResult != null) {
+                // Replace last entry in composedChars with pair result
+                composedChars.removeAt(composedChars.size - 1)
+                for (ch in pairResult) {
+                    composedChars.add(ch)
+                }
+                rebuildComposedBuffer()
+                return composedBuffer.toString()
             }
         }
 
-        // dd → đ
-        if (lower == 'd' && rawBuffer.isNotEmpty() && rawBuffer.last() == 'd') {
-            rawBuffer.deleteCharAt(rawBuffer.length - 1)
-            rawBuffer.append('đ')
-            return composeBuffer()
-        }
-
-        // Normal character: append to buffer
-        rawBuffer.append(lower)
-        return composeBuffer()
+        // --- Normal character ---
+        originalInput.add(lower)
+        composedChars.add(lower)
+        rebuildComposedBuffer()
+        return composedBuffer.toString()
     }
 
-    /**
-     * Try to apply tone to the last vowel in the buffer.
-     * Returns true if tone was applied.
-     */
+    private fun isVowelBase(c: Char): Boolean {
+        return c in setOf('a', 'e', 'o', 'u', 'w')
+    }
+
     private fun findAndApplyTone(tonedMap: Map<Char, Char>?): Char? {
         if (tonedMap == null) return null
-
-        // Walk backwards to find the last vowel
-        for (i in rawBuffer.length - 1 downTo 0) {
-            val ch = rawBuffer[i]
+        for (i in composedChars.size - 1 downTo 0) {
+            val ch = composedChars[i]
             val toned = tonedMap[ch]
             if (toned != null) {
-                rawBuffer[i] = toned
+                composedChars[i] = toned
                 return toned
             }
-            // If we hit a consonant that's not part of a vowel cluster, stop
             if (ch.isLetter() && ch != 'w') break
         }
         return null
     }
 
-    /** Handle backspace: remove last char from buffer. Returns composing text. */
-    fun onBackspace(): String {
-        if (rawBuffer.isNotEmpty()) {
-            rawBuffer.deleteCharAt(rawBuffer.length - 1)
+    private fun rebuildComposedBuffer() {
+        composedBuffer.clear()
+        for (ch in composedChars) {
+            composedBuffer.append(ch)
         }
-        return composeBuffer()
     }
 
-    /** Commit the current word. Returns the final composed string and clears buffer. */
+    fun onBackspace(): String {
+        if (originalInput.isNotEmpty()) {
+            originalInput.removeAt(originalInput.size - 1)
+            composedChars.removeAt(composedChars.size - 1)
+            rebuildComposedBuffer()
+        }
+        return composedBuffer.toString()
+    }
+
     fun commit(): String {
-        val result = composeBuffer()
-        rawBuffer.clear()
+        val result = composedBuffer.toString()
+        originalInput.clear()
+        composedChars.clear()
+        composedBuffer.clear()
         return result
     }
 
-    /** Reset the processor state. */
     fun reset() {
-        rawBuffer.clear()
+        originalInput.clear()
+        composedChars.clear()
+        composedBuffer.clear()
     }
 
-    /** Get current raw buffer (for debugging). */
-    fun getRawBuffer(): String = rawBuffer.toString()
-
-    /**
-     * Compose the raw buffer into Vietnamese text with diacritics.
-     * Simple approach: raw chars are already mapped to Vietnamese chars in the buffer
-     * (e.g., "a" stays "a", "â" is stored directly, "á" is stored directly).
-     * This method just returns the buffer as-is since mapping happens in real-time.
-     */
-    private fun composeBuffer(): String {
-        return rawBuffer.toString()
-    }
-
-    /** Check if buffer is empty. */
-    fun isEmpty(): Boolean = rawBuffer.isEmpty()
+    fun getRawBuffer(): String = originalInput.joinToString("")
+    fun isEmpty(): Boolean = originalInput.isEmpty()
 }
