@@ -256,7 +256,7 @@ class SmartClipboardIME : InputMethodService() {
                 val ch = keyboardView.getCharForKey(keyCode) ?: return
 
                 // Phase 4D.4: Vietnamese Telex mode
-                if (currentLanguage == InputLanguage.VI && ch.isLetter()) {
+                if (currentLanguage == InputLanguage.VI && ch.length == 1 && ch[0].isLetter()) {
                     // Ensure telex processor exists
                     if (telexProcessor == null) {
                         telexProcessor = VietnameseTelexProcessor()
@@ -282,12 +282,12 @@ class SmartClipboardIME : InputMethodService() {
 
                 // Phase 4C.2: Auto-capitalize first letter after sentence end
                 var finalChar = ch
-                if (ch.isLetter() && !keyboardView.isShifted() && shouldAutoCapitalize()) {
+                if (ch.length == 1 && ch[0].isLetter() && !keyboardView.isShifted() && shouldAutoCapitalize()) {
                     finalChar = ch.uppercaseChar()
                 }
 
                 // Phase 4C.3: Double-space → period
-                if (ch == ' ' && lastWasSpace && !isPasswordField()) {
+                if (ch == " " && lastWasSpace && !isPasswordField()) {
                     ic.deleteSurroundingText(1, 0)
                     typingBuffer.deleteCharAt(typingBuffer.length - 1)
                     ic.commitText(". ", 1)
@@ -306,8 +306,8 @@ class SmartClipboardIME : InputMethodService() {
                 ic.commitText(finalChar.toString(), 1)
 
                 // Track state
-                lastCommittedChar = finalChar
-                lastWasSpace = (ch == ' ')
+                lastCommittedChar = finalChar.firstOrNull()
+                lastWasSpace = (ch == " ")
 
                 // Update suggestions
                 updateSuggestions(typingBuffer.toString())
@@ -383,10 +383,7 @@ class SmartClipboardIME : InputMethodService() {
         lastCommittedChar = null
     }
 
-    override fun onReleaseInputView(finishingInput: Boolean) {
-        super.onReleaseInputView(finishingInput)
-        stopBackspaceRepeat()
-    }
+    // Note: backspace repeat stops via onFinishInputView cleanup
 
     private fun stopBackspaceRepeat() {
         backspaceRepeating = false
@@ -670,10 +667,10 @@ class QuickToolbar(context: Context, private val onShortcut: (String) -> Unit) :
         }
         addView(langBtn)
 
-        val shortcuts = listOf(
-            Triple(";", ";"),
-            Triple("@", "@"),
-            Triple(".com", ".com"),
+        val shortcuts: List<Pair<String, String>> = listOf(
+            ";" to ";",
+            "@" to "@",
+            ".com" to ".com",
         )
 
         for ((label, shortcut) in shortcuts) {
