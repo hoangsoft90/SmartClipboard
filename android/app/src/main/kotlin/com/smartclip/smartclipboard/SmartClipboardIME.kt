@@ -74,11 +74,21 @@ class SmartClipboardIME : InputMethodService() {
     override fun onCreateInputView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
         }
 
         // Suggestion strip
         suggestionStrip = SuggestionStrip(this)
-        root.addView(suggestionStrip)
+        root.addView(
+            suggestionStrip,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         // Keyboard
         keyboardView = SmartKeyboardView(this)
@@ -87,7 +97,13 @@ class SmartClipboardIME : InputMethodService() {
                 onKeyPressed(keyCode)
             }
         })
-        root.addView(keyboardView)
+        root.addView(
+            keyboardView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         return root
     }
@@ -152,6 +168,10 @@ class SmartClipboardIME : InputMethodService() {
             }
             -5 -> { // Shift (toggle)
                 keyboardView.toggleShift()
+            }
+            -6 -> {
+                // TODO: Symbol layer — nằm ngoài phạm vi patch này.
+                // Tạm thời không làm gì để tránh crash.
             }
             else -> {
                 // Regular character

@@ -38,7 +38,7 @@ class SmartKeyboardView(context: Context) : View(context) {
     private var isShifted = false
 
     // Key dimensions
-    private val keyHeight = 140  // dp-like pixels (will be scaled)
+    private val keyHeight = 50   // dp — tổng 4 hàng ≈ 50*4 + margin/padding ≈ 230-250dp
     private val keyMargin = 4
     private val keyboardPadding = 6
 
@@ -54,7 +54,7 @@ class SmartKeyboardView(context: Context) : View(context) {
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
-        textSize = 48f
+        textSize = 38f   // giảm từ 48f cho tương xứng với keyHeight=50
         textAlign = Paint.Align.CENTER
     }
     private val specialKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -82,9 +82,9 @@ class SmartKeyboardView(context: Context) : View(context) {
     private val row4 = listOf(
         Key("?123", -6, true),
         Key(",", ','.code),
-        Key("", -2),  // Space — wide
+        Key("", -2),            // Space
         Key(".", '.'.code),
-        Key("⌫", -1, true)
+        Key("↵", -3, true)      // ✅ Enter thay cho Backspace trùng
     )
 
     // Key rects for touch detection
@@ -105,9 +105,22 @@ class SmartKeyboardView(context: Context) : View(context) {
 
     fun getCharForKey(keyCode: Int): String? {
         return if (keyCode in 32..126) {
-            val ch = keyCode.toChar()
+            val ch = keyCode.toChar().lowercaseChar()   // ✅ luôn chuẩn hoá về thường trước
             if (isShifted && ch.isLetter()) ch.uppercaseChar().toString() else ch.toString()
         } else null
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val scale = resources.displayMetrics.density
+        val mh = (keyHeight * scale).toInt()
+        val mm = (keyMargin * scale).toInt()
+        val mp = (keyboardPadding * scale).toInt()
+
+        // 4 hàng phím + 3 khoảng margin giữa hàng + padding trên/dưới
+        val desiredHeight = mh * 4 + mm * 3 + mp * 2
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+
+        setMeasuredDimension(width, desiredHeight)
     }
 
     override fun onDraw(canvas: Canvas) {
