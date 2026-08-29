@@ -189,7 +189,36 @@ if (ch == ";")  // both are String
 **Fix**: Xóa dead code hoàn toàn — KHÔNG giữ lại "just in case"
 **Lesson**: Không viết code reference API chưa verify tồn tại ở target API level
 
-#### 17. InputConnection.extractText / ExtractedTextRequest
+#### 17. String doesn't have `uppercaseChar()` — use `uppercase()`
+**Symptom**: `Unresolved reference: uppercaseChar`
+**Root cause**: `String.uppercaseChar()` is a `Char` extension, not `String`. Kotlin String has `uppercase()` (returns new String)
+**Fix**:
+```kotlin
+// ❌ WRONG
+val upper = ch.uppercaseChar()  // ch is String, not Char
+
+// ✅ CORRECT
+val upper = ch.uppercase()  // String extension
+```
+**Lesson**: When `getCharForKey()` returns `String` (not `Char`), ALL Char-specific methods (`.isLetter()`, `.uppercaseChar()`, `.lowercaseChar()`) fail at compile time. Use `String` equivalents: `.uppercase()`, `.lowercase()`, `.first().isLetter()`
+
+#### 18. MutableList.last() returns a COPY — can't assign to it
+**Symptom**: `Val cannot be reassigned` or silent no-op when doing `list.last() = x`
+**Root cause**: `MutableList.last()` in Kotlin returns a **read-only copy** of the last element, NOT a reference. Assigning to it does nothing.
+**Fix**: Use indexed access:
+```kotlin
+// ❌ WRONG
+val chars = mutableListOf('a', 'b', 'c')
+chars.last() = 'd'  // Silent no-op! 'c' stays
+
+// ✅ CORRECT
+chars[chars.size - 1] = 'd'  // 'c' → 'd'
+// or
+chars[chars.lastIndex] = 'd'
+```
+**Lesson**: When rewriting chars in a buffer during composition (e.g. Telex processor), always use `list[index] = newValue`, never `list.last() = newValue`
+
+#### 19. InputConnection.extractText / ExtractedTextRequest
 **Symptom**: `Unresolved reference: extractText` + `Too many arguments for constructor ExtractedTextRequest`
 **Root cause**: `extractText` method không available trên tất cả API levels. `ExtractedTextRequest()` constructor takes no args (not `(Int)`)
 **Fix**: Không dùng `extractText` — thay bằng cách khác (composing text, hoặc dùng `getExtractedText` nếu cần)
@@ -237,6 +266,9 @@ if (ch == ";")  // both are String
 ### Kotlin/Android
 - [ ] Lambda cho Java interface dùng SAM conversion đúng? (anonymous object nếu lambda fail)
 - [ ] String vs Char comparison đúng? (dùng `";"` không dùng `';'`)
+- [ ] Dùng `.uppercase()` thay `.uppercaseChar()` cho String?
+- [ ] Dùng `.first().isLetter()` thay `.isLetter()` cho String?
+- [ ] Gán giá trị vào MutableList dùng `list[index] = x` không phải `list.last() = x`?
 - [ ] Không có dead code reference API chưa verify?
 - [ ] InputConnection API dùng đúng cách? (extractText có thể không available)
 - [ ] build.gradle KHÔNG có minifyEnabled / shrinkResources?
