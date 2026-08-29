@@ -58,25 +58,10 @@ class SmartClipboardIME : InputMethodService() {
     // Phase 4C: Native feel state
     private var lastCommittedChar: Char? = null
     private var lastWasSpace = false
-    private var backspaceRepeating = false
-    private val backspaceHandler = Handler(Looper.getMainLooper())
-    private var backspaceInterval = 400L
-    private val backspaceRepeatRunnable = object : Runnable {
-        override fun run() {
-            if (backspaceRepeating) {
-                val ic = inputConnection ?: return
-                handleBackspace(ic)
-                // Accelerate: 400 → 300 → 200 → 100ms
-                backspaceInterval = maxOf(100L, backspaceInterval - 100L)
-                backspaceHandler.postDelayed(this, backspaceInterval)
-            }
-        }
-    }
 
     // UI
     private lateinit var keyboardView: SmartKeyboardView
     private lateinit var suggestionStrip: SuggestionStrip
-    private var inputConnection: InputConnection? = null
     private var currentEditorInfo: EditorInfo? = null
 
     // Phase 4C.1: Key preview popup
@@ -161,7 +146,7 @@ class SmartClipboardIME : InputMethodService() {
 
         // Phase 4C.4: Emoji tray (hidden by default)
         emojiTrayView = EmojiTray(this) { emoji ->
-            val ic = inputConnection ?: return@EmojiTray
+            val ic = currentInputConnection ?: return@EmojiTray
             ic.commitText(emoji, 1)
         }
         emojiTrayView?.visibility = View.GONE
@@ -176,9 +161,15 @@ class SmartClipboardIME : InputMethodService() {
         return root
     }
 
+    override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
+        super.onStartInput(info, restarting)
+        // FIX BUG B: commit any leftover composing region from previous session
+        // (in case onFinishInputView didn't fire — process kill, crash, etc.)
+        currentInputConnection?.finishComposingText()
+    }
+
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        inputConnection = currentInputConnection
         currentEditorInfo = info
         typingBuffer.clear()
         isKeyboardVisible = true
@@ -196,10 +187,12 @@ class SmartClipboardIME : InputMethodService() {
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        // FIX BUG B: commit composing region BEFORE resetting internal state,
+        // so unfinished Vietnamese word stays in the editor.
+        currentInputConnection?.finishComposingText()
+
         isKeyboardVisible = false
         handler.removeCallbacks(pollRunnable)
-        backspaceRepeating = false
-        backspaceHandler.removeCallbacks(backspaceRepeatRunnable)
         typingBuffer.clear()
         suggestionStrip.clear()
         // Phase 4C.1 + 4C.4 + 4D: Cleanup
@@ -211,7 +204,6 @@ class SmartClipboardIME : InputMethodService() {
 
     override fun onFinishInput() {
         super.onFinishInput()
-        inputConnection = null
         currentEditorInfo = null
     }
 
@@ -220,7 +212,7 @@ class SmartClipboardIME : InputMethodService() {
     // ================================================================
 
     private fun onKeyPressed(keyCode: Int) {
-        val ic = inputConnection ?: return
+        val ic = currentInputConnection ?: return
 
         // Ignore if password field
         if (isPasswordField()) {
@@ -229,13 +221,11 @@ class SmartClipboardIME : InputMethodService() {
         }
 
         when (keyCode) {
-            -1 -> { // Backspace
+            -1 -> { // Backspace — FIX BUG A: only delete 1 char per tap, NO auto-repeat
                 handleBackspace(ic)
-                // Phase 4C.5: Start repeating
-                backspaceRepeating = true
-                backspaceInterval = 400L
-                backspaceHandler.removeCallbacks(backspaceRepeatRunnable)
-                backspaceHandler.postDelayed(backspaceRepeatRunnable, backspaceInterval)
+                // Removed: auto-repeat mechanism. onKeyPress fires at ACTION_UP so
+                // there's no way to distinguish tap vs long-press — enabling
+                // auto-repeat on tap causes uncontrolled character deletion.
             }
             -2 -> { // Space
                 handleDelimiter(ic, ' ')
@@ -383,13 +373,6 @@ class SmartClipboardIME : InputMethodService() {
         lastCommittedChar = null
     }
 
-    // Note: backspace repeat stops via onFinishInputView cleanup
-
-    private fun stopBackspaceRepeat() {
-        backspaceRepeating = false
-        backspaceHandler.removeCallbacks(backspaceRepeatRunnable)
-    }
-
     private fun commitKeyDirectly(ic: InputConnection, keyCode: Int) {
         val ch = keyboardView.getCharForKey(keyCode) ?: return
         ic.commitText(ch.toString(), 1)
@@ -399,7 +382,7 @@ class SmartClipboardIME : InputMethodService() {
      * Handle quick toolbar shortcuts: ; @ .com
      */
     private fun onToolbarShortcut(shortcut: String) {
-        val ic = inputConnection ?: return
+        val ic = currentInputConnection ?: return
         when (shortcut) {
             ";" -> {
                 typingBuffer.append(";")
