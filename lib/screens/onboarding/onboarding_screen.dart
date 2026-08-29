@@ -43,6 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 children: const [
                   _IntroPage(),
                   _KeyboardPage(),
+                  _SecurityWarningPage(),
                   _OemBatteryPage(),
                   _ShareSheetPage(),
                 ],
@@ -59,11 +60,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   FilledButton(
                     onPressed: () =>
-                        _page < 3 ? _controller.nextPage(
+                        _page < 4 ? _controller.nextPage(
                             duration: const Duration(milliseconds: 250),
                             curve: Curves.easeOut)
                         : _finish(context),
-                    child: Text(_page < 3 ? l10n.btnNext : l10n.onboardingGetStarted),
+                    child: Text(_page < 4 ? l10n.btnNext : l10n.onboardingGetStarted),
                   ),
                 ],
               ),
@@ -140,7 +141,14 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final keyboardEnabled = ref.watch(keyboardEnabledProvider).value ?? false;
+    final activationState =
+        ref.watch(keyboardActivationStateProvider).value ??
+            KeyboardActivationState.disabled;
+    final isDisabled =
+        activationState == KeyboardActivationState.disabled;
+    final isActive =
+        activationState == KeyboardActivationState.active;
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -159,7 +167,7 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          if (!keyboardEnabled)
+          if (isDisabled)
             Card(
               color: Colors.amber,
               child: Padding(
@@ -171,22 +179,133 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
                 ),
               ),
             ),
+          if (!isDisabled && !isActive)
+            Card(
+              color: Colors.orange,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(
+                  'Keyboard enabled! Tap below to switch to Smart Clipboard.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ),
+          if (isActive)
+            Card(
+              color: Colors.green,
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Text(
+                  'Smart Clipboard is your active keyboard!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+            ),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () async {
-              await ref.read(nativeBridgeProvider).openKeyboardSettings();
-              // Re-check after returning
-              ref.invalidate(keyboardEnabledProvider);
+              if (isDisabled) {
+                await ref
+                    .read(nativeBridgeProvider)
+                    .openKeyboardSettings();
+              } else {
+                await ref
+                    .read(nativeBridgeProvider)
+                    .showKeyboardPicker();
+              }
+              ref.invalidate(keyboardActivationStateProvider);
             },
-            icon: Icon(keyboardEnabled ? Icons.check_circle : Icons.settings),
-            label: Text(keyboardEnabled
-                ? l10n.playgroundKeyboardEnabled
-                : l10n.onboardingEnableKeyboard),
+            icon: Icon(
+              isActive ? Icons.check_circle : Icons.settings,
+            ),
+            label: Text(
+              switch (activationState) {
+                KeyboardActivationState.disabled =>
+                    l10n.onboardingEnableKeyboard,
+                KeyboardActivationState.enabledNotActive =>
+                    'Switch to Smart Clipboard',
+                KeyboardActivationState.active =>
+                    l10n.playgroundKeyboardEnabled,
+              },
+            ),
           ),
           const SizedBox(height: 8),
           Text(l10n.onboardingSubtitle4,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic)),
+              style: const TextStyle(
+                  fontSize: 12, fontStyle: FontStyle.italic)),
+        ],
+      ),
+    );
+  }
+}
+
+class _SecurityWarningPage extends StatelessWidget {
+  const _SecurityWarningPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shield_outlined,
+              size: 96, color: theme.colorScheme.primary),
+          const SizedBox(height: 24),
+          Text(
+            'Cảnh báo bảo mật Android',
+            style: theme.textTheme.headlineSmall,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Card(
+            color: theme.colorScheme.errorContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Text(
+                    "Android sẽ hiện cảnh báo bảo mật tiêu chuẩn cho mọi "
+                    "bàn phím: 'Bàn phím này có thể đọc mọi thứ bạn gõ, "
+                    "bao gồm mật khẩu và số thẻ.'",
+                    style: TextStyle(
+                      color: theme.colorScheme.onErrorContainer,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Đây là cảnh báo mặc định của Android cho MỌI IME, '
+                    'không riêng gì Smart Clipboard.',
+                    style: TextStyle(
+                      color: theme.colorScheme.onErrorContainer,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.offline_bolt),
+            title: const Text('100% Local-first'),
+            subtitle: const Text(
+                'Không có quyền Internet, không gửi dữ liệu ra ngoài.'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.lock_outline),
+            title: const Text('Không lưu mật khẩu'),
+            subtitle: const Text(
+                'Smart Clipboard KHÔNG đọc ô nhập mật khẩu (password field).'),
+          ),
         ],
       ),
     );

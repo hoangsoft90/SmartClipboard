@@ -47,6 +47,32 @@ class NativeBridge {
     }
   }
 
+  /// Smart Clipboard có đang là input method HIỆN TẠI (active) không?
+  /// Khác với isKeyboardEnabled() — enabled chỉ nghĩa là "được phép dùng".
+  Future<bool> isKeyboardActive() async {
+    if (!_isSupported) return false;
+    try {
+      return await _channel.invokeMethod<bool>('isKeyboardActive') ?? false;
+    } on MissingPluginException {
+      return false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Mở system IME picker (Settings > Choose input method) để user
+  /// chuyển sang Smart Clipboard ngay trong 1 bước, không cần vào Settings.
+  Future<void> showKeyboardPicker() async {
+    if (!_isSupported) return;
+    try {
+      await _channel.invokeMethod('showKeyboardPicker');
+    } on MissingPluginException {
+      // No-op nếu native side chưa tồn tại.
+    } on PlatformException {
+      // Best-effort.
+    }
+  }
+
   // ===========================================================================
   // FIX 3.2: SAF File Picker for Restore
   // ===========================================================================

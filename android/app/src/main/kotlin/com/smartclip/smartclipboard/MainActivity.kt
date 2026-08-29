@@ -67,6 +67,13 @@ class MainActivity : FlutterFragmentActivity() {
                         openInputMethodSettings()
                         result.success(null)
                     }
+                    "isKeyboardActive" -> {
+                        result.success(isSmartClipboardKeyboardActive())
+                    }
+                    "showKeyboardPicker" -> {
+                        showInputMethodPicker()
+                        result.success(null)
+                    }
                     // SAF File Picker for Restore
                     "pickBackupFile" -> {
                         pickBackupFile(result)
@@ -135,6 +142,35 @@ class MainActivity : FlutterFragmentActivity() {
             enabledImes.any { it.packageName == IME_PACKAGE }
         } catch (_: Exception) {
             false
+        }
+    }
+
+    /**
+     * Check if SmartClipboard IME is the CURRENTLY SELECTED input method
+     * (không chỉ enabled). So sánh DEFAULT_INPUT_METHOD với package name.
+     */
+    private fun isSmartClipboardKeyboardActive(): Boolean {
+        return try {
+            val current = Settings.Secure.getString(
+                contentResolver,
+                Settings.Secure.DEFAULT_INPUT_METHOD
+            )
+            current?.startsWith(IME_PACKAGE) == true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Mở system IME picker để user chủ động chuyển sang Smart Clipboard.
+     * KHÔNG tự set default bằng reflection — luôn để user chọn.
+     */
+    private fun showInputMethodPicker() {
+        try {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showInputMethodPicker()
+        } catch (_: Exception) {
+            // Best-effort
         }
     }
 

@@ -5,18 +5,24 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
-import android.graphics.drawable.Drawable
 import android.view.MotionEvent
 import android.view.View
+import android.content.res.Configuration
 
 /**
- * SmartKeyboardView — minimal QWERTY keyboard rendered programmatically.
+ * SmartKeyboardView — QWERTY keyboard rendered programmatically.
  *
- * Layout:
+ * Layout (LETTERS layer):
  *   Row 1: Q W E R T Y U I O P
  *   Row 2: A S D F G H J K L
  *   Row 3: [Shift] Z X C V B N M [Backspace]
- *   Row 4: [?123] [Space] [.] [Enter]
+ *   Row 4: [?123] [,] [Space] [.] [Enter]
+ *
+ * Layout (SYMBOLS layer):
+ *   Row 1: 1 2 3 4 5 6 7 8 9 0
+ *   Row 2: @ # $ % & * - + ( )
+ *   Row 3: ! " ' : ; / ?
+ *   Row 4: [ABC] [,] [Space] [.] [Enter]
  *
  * Key codes:
  *   >= 0  → ASCII character
@@ -26,23 +32,35 @@ import android.view.View
  *   -4    → Tab
  *   -5    → Shift toggle
  *   -6    → Symbol layer toggle
- *   -7    → Period
  */
 class SmartKeyboardView(context: Context) : View(context) {
+
+    enum class KeyboardLayer { LETTERS, SYMBOLS }
 
     interface OnKeyPressListener {
         fun onKeyPress(keyCode: Int)
     }
 
+    interface KeyPreviewListener {
+        fun onKeyPreview(keyLabel: String, keyRect: Rect)
+        fun onKeyPreviewDismissed()
+    }
+
     private var listener: OnKeyPressListener? = null
+    private var previewListener: KeyPreviewListener? = null
     private var isShifted = false
+    private var currentLayer = KeyboardLayer.LETTERS
 
     // Key dimensions
-    private val keyHeight = 50   // dp — tổng 4 hàng ≈ 50*4 + margin/padding ≈ 230-250dp
+    private val keyHeight = 50   // dp — tổng 4 hàng ≈ 230-250dp
     private val keyMargin = 4
     private val keyboardPadding = 6
 
-    // Paint objects
+    // Theme colors
+    private val isDarkMode: Boolean
+        get() = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+    // Paint objects — LETTERS theme
     private val keyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         style = Paint.Style.FILL
@@ -54,15 +72,35 @@ class SmartKeyboardView(context: Context) : View(context) {
     }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK
-        textSize = 38f   // giảm từ 48f cho tương xứng với keyHeight=50
+        textSize = 38f
         textAlign = Paint.Align.CENTER
     }
     private val specialKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#E0E0E0")
         style = Paint.Style.FILL
     }
-    private val spaceKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+
+    // Dark mode overrides
+    private val darkKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#3A3A3C")
+        style = Paint.Style.FILL
+    }
+    private val darkKeyStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#555555")
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+    }
+    private val darkTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
+        textSize = 38f
+        textAlign = Paint.Align.CENTER
+    }
+    private val darkSpecialKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#2C2C2E")
+        style = Paint.Style.FILL
+    }
+    private val darkBackgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#1C1C1E")
         style = Paint.Style.FILL
     }
 
@@ -73,6 +111,7 @@ class SmartKeyboardView(context: Context) : View(context) {
         val isSpecial: Boolean = false
     )
 
+    // LETTERS layer
     private val row1 = listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P")
         .map { Key(it, it[0].code) }
     private val row2 = listOf("A", "S", "D", "F", "G", "H", "J", "K", "L")
@@ -84,7 +123,22 @@ class SmartKeyboardView(context: Context) : View(context) {
         Key(",", ','.code),
         Key("", -2),            // Space
         Key(".", '.'.code),
-        Key("↵", -3, true)      // ✅ Enter thay cho Backspace trùng
+        Key("↵", -3, true)      // Enter
+    )
+
+    // SYMBOLS layer
+    private val symbolRow1 = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "0")
+        .map { Key(it, it[0].code) }
+    private val symbolRow2 = listOf("@", "#", "$", "%", "&", "*", "-", "+", "(", ")")
+        .map { Key(it, it[0].code) }
+    private val symbolRow3 = listOf("!", "\"", "'", ":", ";", "/", "?")
+        .map { Key(it, it[0].code) }
+    private val symbolRow4 = listOf(
+        Key("ABC", -6, true),
+        Key(",", ','.code),
+        Key("", -2),            // Space
+        Key(".", '.'.code),
+        Key("↵", -3, true)      // Enter
     )
 
     // Key rects for touch detection
@@ -98,14 +152,28 @@ class SmartKeyboardView(context: Context) : View(context) {
         listener = l
     }
 
+    fun setKeyPreviewListener(l: KeyPreviewListener) {
+        previewListener = l
+    }
+
     fun toggleShift() {
         isShifted = !isShifted
         invalidate()
     }
 
+    fun isShifted(): Boolean = isShifted
+
+    fun toggleSymbolLayer() {
+        currentLayer = if (currentLayer == KeyboardLayer.LETTERS) KeyboardLayer.SYMBOLS else KeyboardLayer.LETTERS
+        isShifted = false
+        invalidate()
+    }
+
+    fun isSymbolLayer() = currentLayer == KeyboardLayer.SYMBOLS
+
     fun getCharForKey(keyCode: Int): String? {
         return if (keyCode in 32..126) {
-            val ch = keyCode.toChar().lowercaseChar()   // ✅ luôn chuẩn hoá về thường trước
+            val ch = keyCode.toChar().lowercaseChar()
             if (isShifted && ch.isLetter()) ch.uppercaseChar().toString() else ch.toString()
         } else null
     }
@@ -116,7 +184,6 @@ class SmartKeyboardView(context: Context) : View(context) {
         val mm = (keyMargin * scale).toInt()
         val mp = (keyboardPadding * scale).toInt()
 
-        // 4 hàng phím + 3 khoảng margin giữa hàng + padding trên/dưới
         val desiredHeight = mh * 4 + mm * 3 + mp * 2
         val width = MeasureSpec.getSize(widthMeasureSpec)
 
@@ -127,6 +194,11 @@ class SmartKeyboardView(context: Context) : View(context) {
         super.onDraw(canvas)
         keyRects.clear()
 
+        // Draw background
+        if (isDarkMode) {
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), darkBackgroundPaint)
+        }
+
         val w = width.toFloat()
         val scale = resources.displayMetrics.density
         val mh = (keyHeight * scale).toInt()
@@ -135,20 +207,23 @@ class SmartKeyboardView(context: Context) : View(context) {
 
         var y = mp.toFloat()
 
-        // Row 1: QWERTYUIOP (10 keys)
-        drawRow(canvas, row1, y, w, mp, mm, mh, scale)
-        y += mh + mm
-
-        // Row 2: ASDFGHJKL (9 keys, centered)
-        drawRowCentered(canvas, row2, y, w, mp, mm, mh, scale)
-        y += mh + mm
-
-        // Row 3: [Shift] + ZXCVBNM + [Backspace]
-        drawRow3(canvas, y, w, mp, mm, mh, scale)
-        y += mh + mm
-
-        // Row 4: [?123] [,] [Space] [.] [⌫]
-        drawRow4(canvas, y, w, mp, mm, mh, scale)
+        if (currentLayer == KeyboardLayer.LETTERS) {
+            drawRow(canvas, row1, y, w, mp, mm, mh, scale)
+            y += mh + mm
+            drawRowCentered(canvas, row2, y, w, mp, mm, mh, scale)
+            y += mh + mm
+            drawRow3(canvas, y, w, mp, mm, mh, scale)
+            y += mh + mm
+            drawRow4(canvas, y, w, mp, mm, mh, scale)
+        } else {
+            drawRow(canvas, symbolRow1, y, w, mp, mm, mh, scale)
+            y += mh + mm
+            drawRow(canvas, symbolRow2, y, w, mp, mm, mh, scale)
+            y += mh + mm
+            drawRowCentered(canvas, symbolRow3, y, w, mp, mm, mh, scale)
+            y += mh + mm
+            drawSymbolRow4(canvas, y, w, mp, mm, mh, scale)
+        }
     }
 
     private fun drawRow(
@@ -206,7 +281,7 @@ class SmartKeyboardView(context: Context) : View(context) {
             val displayKey = key.copy(label = ch)
             val rect = Rect(x.toInt(), y.toInt(), x.toInt() + letterWidth, y.toInt() + height)
             drawKey(canvas, rect, displayKey, scale)
-            keyRects.add(KeyRect(rect, key))  // Use original key for keyCode
+            keyRects.add(KeyRect(rect, key))
             x += letterWidth + margin
         }
 
@@ -226,14 +301,14 @@ class SmartKeyboardView(context: Context) : View(context) {
 
         var x = pad.toFloat()
 
-        // ?123
+        // ?123 (dynamic label)
+        val switchKey = row4[0].copy(label = if (currentLayer == KeyboardLayer.LETTERS) "?123" else "ABC")
         val r1 = Rect(x.toInt(), y.toInt(), x.toInt() + specialWidth, y.toInt() + height)
-        drawKey(canvas, r1, row4[0], scale)
-        keyRects.add(KeyRect(r1, row4[0]))
+        drawKey(canvas, r1, switchKey, scale)
+        keyRects.add(KeyRect(r1, switchKey))
         x += specialWidth + margin
 
         // ,
-        val r2 = Rect(x.toInt(), y.toInt(), x.toInt() + margin, y.toInt() + height)
         val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + (40 * scale).toInt(), y.toInt() + height)
         drawKey(canvas, commaRect, row4[1], scale)
         keyRects.add(KeyRect(commaRect, row4[1]))
@@ -251,14 +326,59 @@ class SmartKeyboardView(context: Context) : View(context) {
         keyRects.add(KeyRect(periodRect, row4[3]))
         x += periodWidth + margin
 
-        // Backspace
+        // Enter
         val bsRect = Rect(x.toInt(), y.toInt(), x.toInt() + specialWidth, y.toInt() + height)
         drawKey(canvas, bsRect, row4[4], scale)
         keyRects.add(KeyRect(bsRect, row4[4]))
     }
 
+    private fun drawSymbolRow4(
+        canvas: Canvas, y: Float, totalWidth: Float,
+        pad: Int, margin: Int, height: Int, scale: Float
+    ) {
+        val specialWidth = (80 * scale).toInt()
+        val spaceWidth = (totalWidth - 2 * pad - 2 * margin - 2 * specialWidth - 2 * margin - 2 * margin).toInt()
+        val periodWidth = (50 * scale).toInt()
+
+        var x = pad.toFloat()
+
+        // ABC (switch back)
+        val r1 = Rect(x.toInt(), y.toInt(), x.toInt() + specialWidth, y.toInt() + height)
+        drawKey(canvas, r1, symbolRow4[0], scale)
+        keyRects.add(KeyRect(r1, symbolRow4[0]))
+        x += specialWidth + margin
+
+        // ,
+        val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + (40 * scale).toInt(), y.toInt() + height)
+        drawKey(canvas, commaRect, symbolRow4[1], scale)
+        keyRects.add(KeyRect(commaRect, symbolRow4[1]))
+        x += (40 * scale).toInt() + margin
+
+        // Space
+        val spaceRect = Rect(x.toInt(), y.toInt(), x.toInt() + spaceWidth, y.toInt() + height)
+        drawKey(canvas, spaceRect, symbolRow4[2], scale)
+        keyRects.add(KeyRect(spaceRect, symbolRow4[2]))
+        x += spaceWidth + margin
+
+        // .
+        val periodRect = Rect(x.toInt(), y.toInt(), x.toInt() + periodWidth, y.toInt() + height)
+        drawKey(canvas, periodRect, symbolRow4[3], scale)
+        keyRects.add(KeyRect(periodRect, symbolRow4[3]))
+        x += periodWidth + margin
+
+        // Enter
+        val bsRect = Rect(x.toInt(), y.toInt(), x.toInt() + specialWidth, y.toInt() + height)
+        drawKey(canvas, bsRect, symbolRow4[4], scale)
+        keyRects.add(KeyRect(bsRect, symbolRow4[4]))
+    }
+
     private fun drawKey(canvas: Canvas, rect: Rect, key: Key, scale: Float) {
-        val paint = if (key.isSpecial) specialKeyPaint else keyPaint
+        val kp = if (isDarkMode) darkKeyPaint else keyPaint
+        val ks = if (isDarkMode) darkKeyStrokePaint else keyStrokePaint
+        val tp = if (isDarkMode) darkTextPaint else textPaint
+        val skp = if (isDarkMode) darkSpecialKeyPaint else specialKeyPaint
+
+        val paint = if (key.isSpecial) skp else kp
         val radius = 8f * scale
 
         canvas.drawRoundRect(
@@ -269,17 +389,17 @@ class SmartKeyboardView(context: Context) : View(context) {
         canvas.drawRoundRect(
             rect.left.toFloat(), rect.top.toFloat(),
             rect.right.toFloat(), rect.bottom.toFloat(),
-            radius, radius, keyStrokePaint
+            radius, radius, ks
         )
 
         // Key text
-        val textY = rect.centerY() - (textPaint.descent() + textPaint.ascent()) / 2
-        canvas.drawText(key.label, rect.centerX().toFloat(), textY, textPaint)
+        val textY = rect.centerY() - (tp.descent() + tp.ascent()) / 2
+        canvas.drawText(key.label, rect.centerX().toFloat(), textY, tp)
 
         // Pressed highlight
         if (pressedKey?.rect == rect) {
             val highlightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = 0x30000000
+                color = if (isDarkMode) 0x40FFFFFF else 0x30000000
                 style = Paint.Style.FILL
             }
             canvas.drawRoundRect(
@@ -296,15 +416,19 @@ class SmartKeyboardView(context: Context) : View(context) {
                 val key = findKeyAt(event.x.toInt(), event.y.toInt())
                 pressedKey = key
                 invalidate()
+                // Phase 4C.1: Show key preview
+                if (key != null && key.key.label.isNotEmpty()) {
+                    previewListener?.onKeyPreview(key.key.label, key.rect)
+                }
                 return true
             }
             MotionEvent.ACTION_UP -> {
                 val key = findKeyAt(event.x.toInt(), event.y.toInt())
                 pressedKey = null
                 invalidate()
+                previewListener?.onKeyPreviewDismissed()
 
                 if (key != null) {
-                    // Visual feedback: vibrate briefly
                     try {
                         performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                     } catch (_: Exception) {}
@@ -316,6 +440,7 @@ class SmartKeyboardView(context: Context) : View(context) {
             MotionEvent.ACTION_CANCEL -> {
                 pressedKey = null
                 invalidate()
+                previewListener?.onKeyPreviewDismissed()
                 return true
             }
         }

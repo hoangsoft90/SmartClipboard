@@ -336,6 +336,23 @@ final expansionEngineProvider = Provider<ExpansionEngine>((ref) {
 final keyboardEnabledProvider = FutureProvider<bool>(
     (ref) => ref.watch(nativeBridgeProvider).isKeyboardEnabled());
 
+enum KeyboardActivationState { disabled, enabledNotActive, active }
+
+final keyboardActiveProvider = FutureProvider<bool>(
+    (ref) => ref.watch(nativeBridgeProvider).isKeyboardActive());
+
+final keyboardActivationStateProvider =
+    FutureProvider<KeyboardActivationState>((ref) async {
+  final enabled =
+      await ref.watch(nativeBridgeProvider).isKeyboardEnabled();
+  if (!enabled) return KeyboardActivationState.disabled;
+  final active =
+      await ref.watch(nativeBridgeProvider).isKeyboardActive();
+  return active
+      ? KeyboardActivationState.active
+      : KeyboardActivationState.enabledNotActive;
+});
+
 /// Pro status stub — wire-up `in_app_purchase` ở phase IAP (không thuộc P0).
 /// false = bản Free, áp dụng AppLimits (soft-delete Rule 17).
 final proStatusProvider = StateProvider<bool>((_) => false);

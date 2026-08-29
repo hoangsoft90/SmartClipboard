@@ -64,7 +64,7 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
     final snippetCount =
         ref.watch(snippetListProvider).value?.where((s) => s.isEnabled).length ??
             0;
-    final keyboardEnabled = ref.watch(keyboardEnabledProvider).value ?? false;
+    final activationState = ref.watch(keyboardActivationStateProvider).value ?? KeyboardActivationState.disabled;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.playgroundTitle)),
@@ -127,25 +127,44 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
           const SizedBox(height: 16),
           Card(
             child: ListTile(
-              leading: Icon(keyboardEnabled
-                  ? Icons.check_circle
-                  : Icons.keyboard_alt_outlined),
-              title: Text(keyboardEnabled
-                  ? l10n.playgroundKeyboardEnabled
-                  : l10n.playgroundKeyboardDisabled),
-              subtitle: keyboardEnabled ? null : Text(
-                  l10n.playgroundKeyboardSubtitle,
-                  style: const TextStyle(fontSize: 12)),
-              trailing: keyboardEnabled
+              leading: Icon(
+                switch (activationState) {
+                  KeyboardActivationState.disabled => Icons.keyboard_alt_outlined,
+                  KeyboardActivationState.enabledNotActive => Icons.swap_horiz,
+                  KeyboardActivationState.active => Icons.check_circle,
+                },
+              ),
+              title: Text(
+                switch (activationState) {
+                  KeyboardActivationState.disabled => l10n.playgroundKeyboardDisabled,
+                  KeyboardActivationState.enabledNotActive => l10n.playgroundKeyboardEnabled,
+                  KeyboardActivationState.active => l10n.playgroundKeyboardEnabled,
+                },
+              ),
+              subtitle: Text(
+                switch (activationState) {
+                  KeyboardActivationState.disabled => l10n.playgroundKeyboardSubtitle,
+                  KeyboardActivationState.enabledNotActive => 'Tap to switch to Smart Clipboard',
+                  KeyboardActivationState.active => 'Thử gõ ;email + Space ở Telegram',
+                },
+                style: const TextStyle(fontSize: 12),
+              ),
+              trailing: activationState == KeyboardActivationState.active
                   ? null
                   : TextButton(
                       onPressed: () async {
-                        // Open system keyboard settings
-                        await ref.read(nativeBridgeProvider).openKeyboardSettings();
-                        // Re-check status after returning
-                        ref.invalidate(keyboardEnabledProvider);
+                        if (activationState == KeyboardActivationState.disabled) {
+                          await ref.read(nativeBridgeProvider).openKeyboardSettings();
+                        } else {
+                          await ref.read(nativeBridgeProvider).showKeyboardPicker();
+                        }
+                        ref.invalidate(keyboardActivationStateProvider);
                       },
-                      child: Text(l10n.btnEnable),
+                      child: Text(
+                        activationState == KeyboardActivationState.disabled
+                            ? l10n.btnEnable
+                            : 'Switch',
+                      ),
                     ),
             ),
           ),

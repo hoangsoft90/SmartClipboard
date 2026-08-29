@@ -1,16 +1,17 @@
 package com.smartclip.smartclipboard
 
 import android.content.Context
+import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
-import android.inputmethodservice.Keyboard
-import android.inputmethodservice.KeyboardView
 import android.os.Handler
 import android.os.Looper
 import android.text.InputType
+import android.view.Gravity
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 import org.json.JSONObject
 import java.io.File
@@ -49,11 +50,40 @@ class SmartClipboardIME : InputMethodService() {
     // Typing buffer — accumulates characters for trigger detection
     private val typingBuffer = StringBuilder()
 
+    // Phase 4D: Language state
+    enum class InputLanguage { EN, VI }
+    private var currentLanguage = InputLanguage.EN
+    private var telexProcessor: VietnameseTelexProcessor? = null
+
+    // Phase 4C: Native feel state
+    private var lastCommittedChar: Char? = null
+    private var lastWasSpace = false
+    private var backspaceRepeating = false
+    private val backspaceHandler = Handler(Looper.getMainLooper())
+    private var backspaceInterval = 400L
+    private val backspaceRepeatRunnable = object : Runnable {
+        override fun run() {
+            if (backspaceRepeating) {
+                val ic = inputConnection ?: return
+                handleBackspace(ic)
+                // Accelerate: 400 → 300 → 200 → 100ms
+                backspaceInterval = maxOf(100L, backspaceInterval - 100L)
+                backspaceHandler.postDelayed(this, backspaceInterval)
+            }
+        }
+    }
+
     // UI
     private lateinit var keyboardView: SmartKeyboardView
     private lateinit var suggestionStrip: SuggestionStrip
     private var inputConnection: InputConnection? = null
     private var currentEditorInfo: EditorInfo? = null
+
+    // Phase 4C.1: Key preview popup
+    private var keyPreviewPopup: PopupWindow? = null
+    private var keyPreviewTextView: TextView? = null
+    private var emojiTrayView: EmojiTray? = null
+    private var isEmojiTrayVisible = false
 
     // Polling
     private val handler = Handler(Looper.getMainLooper())
@@ -71,6 +101,9 @@ class SmartClipboardIME : InputMethodService() {
     // Lifecycle
     // ================================================================
 
+    // Quick toolbar
+    private lateinit var toolbar: QuickToolbar
+
     override fun onCreateInputView(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -79,6 +112,18 @@ class SmartClipboardIME : InputMethodService() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
+
+        // Quick toolbar (; @ .com)
+        toolbar = QuickToolbar(this) { shortcut ->
+            onToolbarShortcut(shortcut)
+        }
+        root.addView(
+            toolbar,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
 
         // Suggestion strip
         suggestionStrip = SuggestionStrip(this)
@@ -97,8 +142,31 @@ class SmartClipboardIME : InputMethodService() {
                 onKeyPressed(keyCode)
             }
         })
+        // Phase 4C.1: Key preview popup
+        keyboardView.setKeyPreviewListener(object : SmartKeyboardView.KeyPreviewListener {
+            override fun onKeyPreview(keyLabel: String, keyRect: android.graphics.Rect) {
+                showKeyPreview(keyLabel, keyRect)
+            }
+            override fun onKeyPreviewDismissed() {
+                dismissKeyPreview()
+            }
+        })
         root.addView(
             keyboardView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        // Phase 4C.4: Emoji tray (hidden by default)
+        emojiTrayView = EmojiTray(this) { emoji ->
+            val ic = inputConnection ?: return@EmojiTray
+            ic.commitText(emoji, 1)
+        }
+        emojiTrayView?.visibility = View.GONE
+        root.addView(
+            emojiTrayView,
             LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -130,8 +198,15 @@ class SmartClipboardIME : InputMethodService() {
         super.onFinishInputView(finishingInput)
         isKeyboardVisible = false
         handler.removeCallbacks(pollRunnable)
+        backspaceRepeating = false
+        backspaceHandler.removeCallbacks(backspaceRepeatRunnable)
         typingBuffer.clear()
         suggestionStrip.clear()
+        // Phase 4C.1 + 4C.4 + 4D: Cleanup
+        dismissKeyPreview()
+        isEmojiTrayVisible = false
+        emojiTrayView?.visibility = View.GONE
+        telexProcessor?.reset()
     }
 
     override fun onFinishInput() {
@@ -156,6 +231,11 @@ class SmartClipboardIME : InputMethodService() {
         when (keyCode) {
             -1 -> { // Backspace
                 handleBackspace(ic)
+                // Phase 4C.5: Start repeating
+                backspaceRepeating = true
+                backspaceInterval = 400L
+                backspaceHandler.removeCallbacks(backspaceRepeatRunnable)
+                backspaceHandler.postDelayed(backspaceRepeatRunnable, backspaceInterval)
             }
             -2 -> { // Space
                 handleDelimiter(ic, ' ')
@@ -170,12 +250,25 @@ class SmartClipboardIME : InputMethodService() {
                 keyboardView.toggleShift()
             }
             -6 -> {
-                // TODO: Symbol layer — nằm ngoài phạm vi patch này.
-                // Tạm thời không làm gì để tránh crash.
-            }
-            else -> {
+                keyboardView.toggleSymbolLayer()
+            }            else -> {
                 // Regular character
                 val ch = keyboardView.getCharForKey(keyCode) ?: return
+
+                // Phase 4D.4: Vietnamese Telex mode
+                if (currentLanguage == InputLanguage.VI && ch.isLetter()) {
+                    // Ensure telex processor exists
+                    if (telexProcessor == null) {
+                        telexProcessor = VietnameseTelexProcessor()
+                    }
+                    val composingText = telexProcessor!!.onChar(ch[0])
+                    typingBuffer.append(ch)
+                    ic.setComposingText(composingText, 1)
+                    lastCommittedChar = composingText.lastOrNull()
+                    lastWasSpace = false
+                    updateSuggestions(typingBuffer.toString())
+                    return
+                }
 
                 // FIX 5.2: Handle ;; escape
                 if (ch == ";" && typingBuffer.isNotEmpty() && typingBuffer.last() == ';') {
@@ -187,11 +280,34 @@ class SmartClipboardIME : InputMethodService() {
                     return
                 }
 
+                // Phase 4C.2: Auto-capitalize first letter after sentence end
+                var finalChar = ch
+                if (ch.isLetter() && !keyboardView.isShifted() && shouldAutoCapitalize()) {
+                    finalChar = ch.uppercaseChar()
+                }
+
+                // Phase 4C.3: Double-space → period
+                if (ch == ' ' && lastWasSpace && !isPasswordField()) {
+                    ic.deleteSurroundingText(1, 0)
+                    typingBuffer.deleteCharAt(typingBuffer.length - 1)
+                    ic.commitText(". ", 1)
+                    lastCommittedChar = '.'
+                    lastWasSpace = false
+                    typingBuffer.clear()
+                    updateSuggestions("")
+                    return
+                }
+
                 // Add to buffer
                 typingBuffer.append(ch)
 
+
                 // Commit the character
-                ic.commitText(ch.toString(), 1)
+                ic.commitText(finalChar.toString(), 1)
+
+                // Track state
+                lastCommittedChar = finalChar
+                lastWasSpace = (ch == ' ')
 
                 // Update suggestions
                 updateSuggestions(typingBuffer.toString())
@@ -204,6 +320,12 @@ class SmartClipboardIME : InputMethodService() {
      * Check if typing buffer contains a trigger — if so, replace.
      */
     private fun handleDelimiter(ic: InputConnection, delimiter: Char) {
+        // Phase 4D.4: If Vietnamese Telex is composing, commit the telex word first
+        if (currentLanguage == InputLanguage.VI && telexProcessor != null && !telexProcessor!!.isEmpty()) {
+            ic.finishComposingText()
+            telexProcessor!!.commit()
+        }
+
         if (typingBuffer.isEmpty()) {
             // Nothing to check — just commit delimiter
             ic.commitText(delimiter.toString(), 1)
@@ -217,6 +339,9 @@ class SmartClipboardIME : InputMethodService() {
         if (content != null) {
             // Trigger matched! Delete the trigger text and insert content.
             val charsToDelete = bufferStr.length
+
+            // Ensure composing is finished before expansion
+            ic.finishComposingText()
 
             // Delete trigger text and insert snippet content
             ic.deleteSurroundingText(charsToDelete, 0)
@@ -233,16 +358,132 @@ class SmartClipboardIME : InputMethodService() {
     }
 
     private fun handleBackspace(ic: InputConnection) {
+        // Phase 4D.4: Vietnamese Telex backspace
+        if (currentLanguage == InputLanguage.VI && telexProcessor != null && !telexProcessor!!.isEmpty()) {
+            val composingText = telexProcessor!!.onBackspace()
+            if (typingBuffer.isNotEmpty()) {
+                typingBuffer.deleteCharAt(typingBuffer.length - 1)
+            }
+            if (composingText.isNotEmpty()) {
+                ic.setComposingText(composingText, 1)
+            } else {
+                ic.finishComposingText()
+                ic.deleteSurroundingText(1, 0)
+            }
+            updateSuggestions(typingBuffer.toString())
+            lastCommittedChar = null
+            return
+        }
+
         if (typingBuffer.isNotEmpty()) {
             typingBuffer.deleteCharAt(typingBuffer.length - 1)
             updateSuggestions(typingBuffer.toString())
         }
         ic.deleteSurroundingText(1, 0)
+        lastCommittedChar = null
+    }
+
+    override fun onReleaseInputView(finishingInput: Boolean) {
+        super.onReleaseInputView(finishingInput)
+        stopBackspaceRepeat()
+    }
+
+    private fun stopBackspaceRepeat() {
+        backspaceRepeating = false
+        backspaceHandler.removeCallbacks(backspaceRepeatRunnable)
     }
 
     private fun commitKeyDirectly(ic: InputConnection, keyCode: Int) {
         val ch = keyboardView.getCharForKey(keyCode) ?: return
         ic.commitText(ch.toString(), 1)
+    }
+
+    /**
+     * Handle quick toolbar shortcuts: ; @ .com
+     */
+    private fun onToolbarShortcut(shortcut: String) {
+        val ic = inputConnection ?: return
+        when (shortcut) {
+            ";" -> {
+                typingBuffer.append(";")
+                ic.commitText(";", 1)
+                updateSuggestions(typingBuffer.toString())
+            }
+            "@" -> {
+                typingBuffer.append("@")
+                ic.commitText("@", 1)
+                updateSuggestions(typingBuffer.toString())
+            }
+            ".com" -> {
+                ic.commitText(".com ", 1)
+                typingBuffer.clear()
+                updateSuggestions("")
+            }
+            "EMOJI" -> {
+                // Phase 4C.4: Toggle emoji tray
+                isEmojiTrayVisible = !isEmojiTrayVisible
+                emojiTrayView?.visibility = if (isEmojiTrayVisible) View.VISIBLE else View.GONE
+            }
+            "LANG" -> {
+                // Phase 4D.2: Toggle EN/VI
+                currentLanguage = if (currentLanguage == InputLanguage.EN) InputLanguage.VI else InputLanguage.EN
+                toolbar.setLanguage(if (currentLanguage == InputLanguage.VI) "VI" else "EN")
+                telexProcessor?.reset()
+                typingBuffer.clear()
+                updateSuggestions("")
+            }
+        }
+    }
+
+    // ================================================================
+    // Phase 4C.1: Key Preview Popup
+    // ================================================================
+
+    private fun showKeyPreview(keyLabel: String, keyRect: android.graphics.Rect) {
+        dismissKeyPreview()
+
+        // Create preview TextView
+        val tv = TextView(this).apply {
+            text = keyLabel
+            textSize = 28f
+            setTextColor(if (isDarkMode()) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+            setBackgroundColor(if (isDarkMode()) android.graphics.Color.parseColor("#3A3A3C") else android.graphics.Color.WHITE)
+            setPadding(24, 16, 24, 16)
+            gravity = Gravity.CENTER
+            elevation = 8f
+        }
+        keyPreviewTextView = tv
+
+        // Measure to get proper size
+        tv.measure(
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        )
+        val popupWidth = maxOf(tv.measuredWidth + 32, 64)
+        val popupHeight = maxOf(tv.measuredHeight + 24, 48)
+
+        // Create PopupWindow
+        val popup = PopupWindow(tv, popupWidth, popupHeight, false)
+        keyPreviewPopup = popup
+
+        // Position: centered above the key
+        val loc = IntArray(2)
+        keyboardView.getLocationOnScreen(loc)
+        val x = loc[0] + keyRect.centerX() - popupWidth / 2
+        val y = loc[1] + keyRect.top - popupHeight - 8
+
+        popup.showAtLocation(keyboardView, Gravity.NO_GRAVITY, x, y)
+    }
+
+    private fun dismissKeyPreview() {
+        keyPreviewPopup?.dismiss()
+        keyPreviewPopup = null
+        keyPreviewTextView = null
+    }
+
+    private fun isDarkMode(): Boolean {
+        return (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
     }
 
     private fun isPasswordField(): Boolean {
@@ -251,6 +492,18 @@ class SmartClipboardIME : InputMethodService() {
         return variation == InputType.TYPE_TEXT_VARIATION_PASSWORD ||
                 variation == InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD ||
                 variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
+    }
+
+    /**
+     * Phase 4C.2: Auto-capitalize after sentence end.
+     * Returns true if next letter should be uppercase.
+     */
+    private fun shouldAutoCapitalize(): Boolean {
+        if (typingBuffer.isNotEmpty()) return false
+        return when (lastCommittedChar) {
+            null, '.', '!', '?', '\n' -> true
+            else -> false
+        }
     }
 
     // ================================================================
@@ -390,5 +643,117 @@ class SuggestionStrip(context: Context) : LinearLayout(context) {
 
     fun clear() {
         container.removeAllViews()
+    }
+}
+
+// ================================================================
+// Quick Toolbar — shortcut buttons for ; @ .com
+// ================================================================
+
+class QuickToolbar(context: Context, private val onShortcut: (String) -> Unit) : LinearLayout(context) {
+
+    private val langBtn: TextView
+
+    init {
+        orientation = HORIZONTAL
+        setPadding(4, 2, 4, 2)
+        setBackgroundColor(0xFFF0F0F0.toInt())
+
+        // Phase 4D.2: EN/VI toggle
+        langBtn = TextView(context).apply {
+            text = "EN"
+            setPadding(16, 8, 16, 8)
+            textSize = 13f
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0xFF1976D2.toInt())
+            setOnClickListener { onShortcut("LANG") }
+        }
+        addView(langBtn)
+
+        val shortcuts = listOf(
+            Triple(";", ";"),
+            Triple("@", "@"),
+            Triple(".com", ".com"),
+        )
+
+        for ((label, shortcut) in shortcuts) {
+            // Divider before
+            val divider = View(context).apply {
+                layoutParams = LayoutParams(1, LayoutParams.MATCH_PARENT).apply {
+                    setMargins(4, 8, 4, 8)
+                }
+                setBackgroundColor(0xFFCCCCCC.toInt())
+            }
+            addView(divider)
+
+            val btn = TextView(context).apply {
+                text = label
+                setPadding(20, 8, 20, 8)
+                textSize = 14f
+                setTextColor(0xFF1976D2.toInt())
+                setBackgroundColor(0x00000000)
+                setOnClickListener { onShortcut(shortcut) }
+            }
+            addView(btn)
+        }
+
+        // Divider before emoji
+        val emojiDivider = View(context).apply {
+            layoutParams = LayoutParams(1, LayoutParams.MATCH_PARENT).apply {
+                setMargins(4, 8, 4, 8)
+            }
+            setBackgroundColor(0xFFCCCCCC.toInt())
+        }
+        addView(emojiDivider)
+
+        val emojiBtn = TextView(context).apply {
+            text = "😀"
+            setPadding(20, 8, 20, 8)
+            textSize = 18f
+            setBackgroundColor(0x00000000)
+            setOnClickListener { onShortcut("EMOJI") }
+        }
+        addView(emojiBtn)
+    }
+
+    fun setLanguage(lang: String) {
+        langBtn.text = lang
+    }
+}
+
+// ================================================================
+// Emoji Tray — common emojis grid
+// ================================================================
+
+class EmojiTray(context: Context, private val onEmoji: (String) -> Unit) : android.widget.GridLayout(context) {
+
+    private val commonEmojis = listOf(
+        "😀", "😂", "😍", "🥰", "😎", "🤔", "😅", "😢", "😤", "👍",
+        "👎", "❤️", "🔥", "⭐", "🎉", "🎊", "✅", "❌", "💯", "🙏",
+        "📱", "💻", "📧", "📎", "📋", "⏰", "📅", "🔑", "💡", "🔔",
+        "✈️", "🚗", "🏠", "🌍", "☀️", "🌙", "⭐", "🌈", "🌸", "🍕",
+        "☕", "🍺", "🎵", "📷", "🎮", "⚽", "🏀", "🎯", "🏆", "💪",
+    )
+
+    init {
+        columnCount = 10
+        setPadding(8, 4, 8, 4)
+        setBackgroundColor(0xFFE8E8E8.toInt())
+
+        for (emoji in commonEmojis) {
+            val btn = android.widget.TextView(context).apply {
+                text = emoji
+                textSize = 22f
+                setPadding(8, 8, 8, 8)
+                setOnClickListener { onEmoji(emoji) }
+                gravity = android.view.Gravity.CENTER
+            }
+            val params = android.widget.GridLayout.LayoutParams().apply {
+                width = 0
+                height = android.widget.GridLayout.LayoutParams.WRAP_CONTENT
+                columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+            }
+            addView(btn, params)
+        }
     }
 }

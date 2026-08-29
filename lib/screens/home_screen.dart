@@ -191,33 +191,67 @@ class _KeyboardEnableBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final enabled = ref.watch(keyboardEnabledProvider);
-    return enabled.when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (isEnabled) => isEnabled
-          ? const SizedBox.shrink()
-          : Material(
-              color: Theme.of(context).colorScheme.secondaryContainer,
-              child: SafeArea(
-                bottom: false,
-                child: ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.keyboard),
-                    title: Text(l10n.playgroundKeyboardDisabled,
-                        style: const TextStyle(fontSize: 13)),
-                    subtitle: Text(l10n.playgroundKeyboardSubtitle,
-                        style: const TextStyle(fontSize: 11)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.close, size: 18),
-                      onPressed: onDismiss,
-                    ),
-                    onTap: () async {
-                      await ref.read(nativeBridgeProvider).openKeyboardSettings();
-                      ref.invalidate(keyboardEnabledProvider);
-                    }),
-              ),
+    final activationState =
+        ref.watch(keyboardActivationStateProvider).value ??
+            KeyboardActivationState.disabled;
+
+    // Chỉ hiển thị banner khi chưa active
+    if (activationState == KeyboardActivationState.active) {
+      return const SizedBox.shrink();
+    }
+
+    final isDisabled =
+        activationState == KeyboardActivationState.disabled;
+
+    return Material(
+      color: isDisabled
+          ? Theme.of(context).colorScheme.errorContainer
+          : Theme.of(context).colorScheme.tertiaryContainer,
+      child: SafeArea(
+        bottom: false,
+        child: ListTile(
+          dense: true,
+          leading: Icon(
+            isDisabled ? Icons.keyboard : Icons.swap_horiz,
+            color: isDisabled
+                ? Theme.of(context).colorScheme.onErrorContainer
+                : Theme.of(context).colorScheme.onTertiaryContainer,
+          ),
+          title: Text(
+            isDisabled
+                ? l10n.playgroundKeyboardDisabled
+                : l10n.playgroundKeyboardEnabled,
+            style: TextStyle(
+              fontSize: 13,
+              color: isDisabled
+                  ? Theme.of(context).colorScheme.onErrorContainer
+                  : Theme.of(context).colorScheme.onTertiaryContainer,
             ),
+          ),
+          subtitle: Text(
+            isDisabled
+                ? l10n.playgroundKeyboardSubtitle
+                : 'Tap to switch to Smart Clipboard',
+            style: const TextStyle(fontSize: 11),
+          ),
+          trailing: IconButton(
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: onDismiss,
+          ),
+          onTap: () async {
+            if (isDisabled) {
+              await ref
+                  .read(nativeBridgeProvider)
+                  .openKeyboardSettings();
+            } else {
+              await ref
+                  .read(nativeBridgeProvider)
+                  .showKeyboardPicker();
+            }
+            ref.invalidate(keyboardActivationStateProvider);
+          },
+        ),
+      ),
     );
   }
 }
