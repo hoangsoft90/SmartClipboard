@@ -71,7 +71,7 @@ class VietnameseTelexProcessor {
         // --- dd → đ ---
         if (lower == 'd' && originalInput.isNotEmpty() && originalInput.last() == 'd' &&
             composedChars.isNotEmpty() && composedChars.last() == 'd') {
-            composedChars.last() = 'đ'
+            composedChars[composedChars.size - 1] = 'đ'
             rebuildComposedBuffer()
             return composedBuffer.toString()
         }

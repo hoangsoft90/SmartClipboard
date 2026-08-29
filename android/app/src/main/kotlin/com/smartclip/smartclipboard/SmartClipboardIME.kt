@@ -283,7 +283,7 @@ class SmartClipboardIME : InputMethodService() {
                 // Phase 4C.2: Auto-capitalize first letter after sentence end
                 var finalChar = ch
                 if (ch.length == 1 && ch[0].isLetter() && !keyboardView.isShifted() && shouldAutoCapitalize()) {
-                    finalChar = ch.uppercaseChar()
+                    finalChar = ch.uppercase()
                 }
 
                 // Phase 4C.3: Double-space → period
