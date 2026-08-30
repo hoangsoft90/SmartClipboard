@@ -381,10 +381,11 @@ class SmartKeyboardView(context: Context) : View(context) {
         keyRects.add(KeyRect(r1, switchKey))
         x += specialWidth + margin
 
-        // ,            val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + commaWidth, y.toInt() + height)
-            drawKey(canvas, commaRect, row4[1], scale)
-            keyRects.add(KeyRect(commaRect, row4[1]))
-            x += commaWidth + margin
+        // ,
+        val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + commaWidth, y.toInt() + height)
+        drawKey(canvas, commaRect, row4[1], scale)
+        keyRects.add(KeyRect(commaRect, row4[1]))
+        x += commaWidth + margin
 
         // Space
         val spaceRect = Rect(x.toInt(), y.toInt(), x.toInt() + spaceWidth, y.toInt() + height)
@@ -450,10 +451,11 @@ class SmartKeyboardView(context: Context) : View(context) {
         keyRects.add(KeyRect(r1, symbolRow4[0]))
         x += specialWidth + margin
 
-        // ,            val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + commaWidth, y.toInt() + height)
-            drawKey(canvas, commaRect, symbolRow4[1], scale)
-            keyRects.add(KeyRect(commaRect, symbolRow4[1]))
-            x += commaWidth + margin
+        // ,
+        val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + commaWidth, y.toInt() + height)
+        drawKey(canvas, commaRect, symbolRow4[1], scale)
+        keyRects.add(KeyRect(commaRect, symbolRow4[1]))
+        x += commaWidth + margin
 
         // Space
         val spaceRect = Rect(x.toInt(), y.toInt(), x.toInt() + spaceWidth, y.toInt() + height)
