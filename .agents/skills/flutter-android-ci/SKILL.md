@@ -223,6 +223,23 @@ chars[chars.lastIndex] = 'd'
 **Root cause**: `extractText` method không available trên tất cả API levels. `ExtractedTextRequest()` constructor takes no args (not `(Int)`)
 **Fix**: Không dùng `extractText` — thay bằng cách khác (composing text, hoặc dùng `getExtractedText` nếu cần)
 
+#### 20. str_replace merged comment + variable declaration onto one line
+**Symptom**: `Unresolved reference: commaRect` — variable appears on same line as comment
+**Root cause**: `str_replace` oldString contained `// ,
+ val commaRect = ...` but when the newString accidentally merged `// ,` comment with `val commaRect = ...` into a single line, Kotlin treats the entire line as a comment → `commaRect` is never declared → `Unresolved reference` downstream
+**Fix**: Always verify `str_replace` output when the old/new string contains a comment line followed by a declaration. The tool does exact string matching — if the old string has a newline between comment and declaration, the new string MUST also have that newline:
+```kotlin
+// ❌ WRONG — comment merges with declaration
+// ,            val commaRect = Rect(...)
+    drawKey(canvas, commaRect, ...)
+
+// ✅ CORRECT — comment and declaration are separate lines
+// ,
+val commaRect = Rect(...)
+drawKey(canvas, commaRect, ...)
+```
+**Lesson**: After any `str_replace` involving multi-line blocks with comments, ALWAYS read the affected lines back to verify the structure is intact before committing. This is especially dangerous because the Kotlin compiler error (`Unresolved reference`) points to the USAGE line, not the merged declaration line — making it harder to trace back to the root cause.
+
 ---
 
 ### Code/Dart Pitfalls
@@ -276,6 +293,7 @@ chars[chars.lastIndex] = 'd'
 - [ ] AndroidManifest.xml KHÔNG có `android:banner` (trừ TV app)?
 - [ ] Mipmap PNG icons cho tất cả density?
 - [ ] Gradle wrapper ≥ 8.0?
+- [ ] Sau str_replace multi-line blocks: verify comment/declaration không merge nhau?
 
 ### Workflow
 - [ ] lib/ được save + restore?
