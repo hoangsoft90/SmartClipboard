@@ -66,6 +66,7 @@ class AppSettings {
   final bool capturePaused; // Incognito/Pause Mode (mục 5.2)
   final bool biometricLock;
   final bool onboardingDone;
+  final String keyboardBgColor; // PLAN 7 P1-5: keyboard background hex
 
   /// false khi đang load từ DB lần đầu — UI hiển thị splash, tránh flash.
   final bool loaded;
@@ -75,6 +76,7 @@ class AppSettings {
     required this.capturePaused,
     required this.biometricLock,
     required this.onboardingDone,
+    required this.keyboardBgColor,
     required this.loaded,
   });
 
@@ -83,12 +85,14 @@ class AppSettings {
     bool capturePaused = false,
     bool biometricLock = false,
     bool onboardingDone = false,
+    String keyboardBgColor = '#FFFFFF',
     bool loaded = false,
   }) => AppSettings._(
         expirationDays: expirationDays ?? 30,
         capturePaused: capturePaused,
         biometricLock: biometricLock,
         onboardingDone: onboardingDone,
+        keyboardBgColor: keyboardBgColor,
         loaded: loaded,
       );
 
@@ -97,6 +101,7 @@ class AppSettings {
     bool? capturePaused,
     bool? biometricLock,
     bool? onboardingDone,
+    String? keyboardBgColor,
     bool? loaded,
   }) =>
       AppSettings(
@@ -104,6 +109,7 @@ class AppSettings {
         capturePaused: capturePaused ?? this.capturePaused,
         biometricLock: biometricLock ?? this.biometricLock,
         onboardingDone: onboardingDone ?? this.onboardingDone,
+        keyboardBgColor: keyboardBgColor ?? this.keyboardBgColor,
         loaded: loaded ?? this.loaded,
       );
 }
@@ -117,6 +123,7 @@ class AppSettingsController extends StateNotifier<AppSettings> {
   Future<void> _load() async {
     final expirationDays = await _meta.getInt('expiration_days',
         fallback: AppLimits.expirationOptionsDays.last);
+    final bgHex = await _meta.get('keyboard_bg_color');
     state = AppSettings(
       expirationDays: AppLimits.expirationOptionsDays.contains(expirationDays)
           ? expirationDays
@@ -124,6 +131,7 @@ class AppSettingsController extends StateNotifier<AppSettings> {
       capturePaused: await _meta.getBool('capture_paused'),
       biometricLock: await _meta.getBool('biometric_lock'),
       onboardingDone: await _meta.getBool('onboarding_done'),
+      keyboardBgColor: (bgHex != null && bgHex.isNotEmpty) ? bgHex : '#FFFFFF',
       loaded: true,
     );
   }
@@ -147,6 +155,12 @@ class AppSettingsController extends StateNotifier<AppSettings> {
   Future<void> completeOnboarding() async {
     await _meta.setBool('onboarding_done', true);
     state = state.copyWith(onboardingDone: true);
+  }
+
+  // PLAN 7 P1-5: Save keyboard background color
+  Future<void> setKeyboardBgColor(String hex) async {
+    await _meta.set('keyboard_bg_color', hex);
+    state = state.copyWith(keyboardBgColor: hex);
   }
 }
 

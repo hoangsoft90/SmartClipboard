@@ -123,6 +123,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
         ),
 
+        // ---------------- PLAN 7 P1-5: Keyboard background color ----------------
+        _SectionHeader(l10n.settingsKeyboardBgColor),
+        _KeyboardBgColorPicker(
+          currentColor: settings.keyboardBgColor,
+          onColorSelected: (hex) {
+            ref.read(appSettingsProvider.notifier).setKeyboardBgColor(hex);
+          },
+        ),
+
         // ---------------- Metrics local-only ----------------
         _SectionHeader(l10n.settingsStatsSection),
         _MetricsSummary(onRefresh: () => setState(() {})),
@@ -202,6 +211,71 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+}
+
+class _KeyboardBgColorPicker extends StatelessWidget {
+  final String currentColor;
+  final ValueChanged<String> onColorSelected;
+
+  const _KeyboardBgColorPicker({
+    required this.currentColor,
+    required this.onColorSelected,
+  });
+
+  // PLAN 7 P1-5: Preset colors — no color-picker package needed
+  static const presets = [
+    _ColorPreset('#FFFFFF', 'White'),
+    _ColorPreset('#E0E0E0', 'Gray'),
+    _ColorPreset('#D6E4FF', 'Blue'),
+    _ColorPreset('#1C1C1E', 'Black'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        children: presets.map((preset) {
+          final selected = currentColor.toUpperCase() == preset.hex.toUpperCase();
+          final color = Color(int.parse('FF${preset.hex.substring(1)}', radix: 16));
+          final isDark = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255 < 0.5;
+          return GestureDetector(
+            onTap: () => onColorSelected(preset.hex),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: selected ? Theme.of(context).colorScheme.primary : Colors.grey.shade400,
+                  width: selected ? 3 : 1,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  preset.label,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: isDark ? Colors.white : Colors.black,
+                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _ColorPreset {
+  final String hex;
+  final String label;
+  const _ColorPreset(this.hex, this.label);
 }
 
 class _SectionHeader extends StatelessWidget {

@@ -103,6 +103,7 @@ const Map<String, String> appStringsVi = {
   'settingsSecuritySection': 'Bảo mật',
   'settingsCaptureSection': 'Ghi lịch sử',
   'settingsStatsSection': 'Thống kê (chỉ lưu trên máy)',
+  'settingsKeyboardBgColor': 'Màu nền bàn phím',
   'exportDialogPassphraseTitle': 'Nhập passphrase cho backup',
   'exportDialogPassphraseLabel': 'Passphrase (tự chọn)',
   'exportDialogPassphraseWarning':

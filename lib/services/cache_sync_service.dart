@@ -90,10 +90,18 @@ class CacheSyncService {
     // FIX 1.4: Monotonic counter — tăng từ DB, KHÔNG dùng timestamp.
     final version = await _incrementVersion();
 
+    // PLAN 7 P1-5: Read keyboard background color from app_meta
+    final bgRows = await db.query('app_meta',
+        where: 'key = ?', whereArgs: ['keyboard_bg_color'], limit: 1);
+    final bgColorHex = bgRows.isNotEmpty
+        ? (bgRows.first['value'] as String?) ?? '#FFFFFF'
+        : '#FFFFFF';
+
     final file = await _cacheFile();
     final payload = jsonEncode({
       'cache_version': version,
       'triggers': triggers,
+      'keyboard_bg_color': bgColorHex, // PLAN 7 P1-5
     });
     // Ghi atomically-ish: ghi file tạm rồi rename để IME (Phase 1) ít khi đọc
     // phải file dở dang.

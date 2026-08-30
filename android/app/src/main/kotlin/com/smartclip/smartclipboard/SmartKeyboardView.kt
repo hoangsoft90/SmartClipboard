@@ -5,6 +5,8 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
 import android.view.MotionEvent
 import android.view.View
 import android.content.res.Configuration
@@ -51,6 +53,18 @@ class SmartKeyboardView(context: Context) : View(context) {
     private var isShifted = false
     private var currentLayer = KeyboardLayer.LETTERS
 
+    // PLAN 7 P0-2: Backspace long-press repeat state
+    private var isBackspaceRepeating = false
+    private val touchHandler = Handler(Looper.getMainLooper())
+    private val backspaceRepeatRunnable = object : Runnable {
+        override fun run() {
+            if (isBackspaceRepeating) {
+                listener?.onKeyPress(-1) // Backspace key code
+                touchHandler.postDelayed(this, 70) // Repeat interval
+            }
+        }
+    }
+
     // Key dimensions
     private val keyHeight = 50   // dp — tổng 4 hàng ≈ 230-250dp
     private val keyMargin = 4
@@ -78,6 +92,21 @@ class SmartKeyboardView(context: Context) : View(context) {
     private val specialKeyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.parseColor("#E0E0E0")
         style = Paint.Style.FILL
+    }
+
+    // PLAN 7 P1-5: Custom keyboard background color
+    private var customBgColor: Int? = null
+
+    fun setKeyboardBackgroundColor(color: Int) {
+        if (customBgColor != color) {
+            customBgColor = color
+            invalidate()
+        }
+    }
+
+    private fun isColorDark(color: Int): Boolean {
+        val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255
+        return luminance < 0.5
     }
 
     // Dark mode overrides
@@ -205,8 +234,12 @@ class SmartKeyboardView(context: Context) : View(context) {
         super.onDraw(canvas)
         keyRects.clear()
 
-        // Draw background
-        if (isDarkMode) {
+        // PLAN 7 P1-5: Draw background — custom color takes priority over system dark mode
+        val bgColor = customBgColor
+        if (bgColor != null) {
+            val bgPaint = Paint().apply { color = bgColor; style = Paint.Style.FILL }
+            canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+        } else if (isDarkMode) {
             canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), darkBackgroundPaint)
         }
 
@@ -413,10 +446,12 @@ class SmartKeyboardView(context: Context) : View(context) {
     }
 
     private fun drawKey(canvas: Canvas, rect: Rect, key: Key, scale: Float) {
-        val kp = if (isDarkMode) darkKeyPaint else keyPaint
-        val ks = if (isDarkMode) darkKeyStrokePaint else keyStrokePaint
-        val tp = if (isDarkMode) darkTextPaint else textPaint
-        val skp = if (isDarkMode) darkSpecialKeyPaint else specialKeyPaint
+        // PLAN 7 P1-5: Use custom bg luminance for paint selection when set
+        val useDark = customBgColor?.let { isColorDark(it) } ?: isDarkMode
+        val kp = if (useDark) darkKeyPaint else keyPaint
+        val ks = if (useDark) darkKeyStrokePaint else keyStrokePaint
+        val tp = if (useDark) darkTextPaint else textPaint
+        val skp = if (useDark) darkSpecialKeyPaint else specialKeyPaint
 
         val paint = if (key.isSpecial) skp else kp
         val radius = 8f * scale
@@ -460,6 +495,29 @@ class SmartKeyboardView(context: Context) : View(context) {
                 if (key != null && key.key.label.isNotEmpty()) {
                     previewListener?.onKeyPreview(key.key.label, key.rect)
                 }
+                // PLAN 7 P0-2: Start backspace repeat on long-press
+                if (key != null && key.key.keyCode == -1) {
+                    isBackspaceRepeating = true
+                    // Fire first repeat after 400ms delay, then 70ms interval
+                    touchHandler.postDelayed(backspaceRepeatRunnable, 400)
+                }
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                // PLAN 7 P0-2: If finger moved off the Backspace key while pressing,
+                // stop the repeat immediately — don't wait for ACTION_UP.
+                if (isBackspaceRepeating) {
+                    val stillOnBackspace = pressedKey?.rect?.contains(
+                        event.x.toInt(), event.y.toInt()
+                    ) == true
+                    if (!stillOnBackspace) {
+                        isBackspaceRepeating = false
+                        touchHandler.removeCallbacks(backspaceRepeatRunnable)
+                        pressedKey = null
+                        invalidate()
+                        previewListener?.onKeyPreviewDismissed()
+                    }
+                }
                 return true
             }
             MotionEvent.ACTION_UP -> {
@@ -478,6 +536,8 @@ class SmartKeyboardView(context: Context) : View(context) {
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
+                isBackspaceRepeating = false
+                touchHandler.removeCallbacks(backspaceRepeatRunnable)
                 pressedKey = null
                 invalidate()
                 previewListener?.onKeyPreviewDismissed()
@@ -485,6 +545,13 @@ class SmartKeyboardView(context: Context) : View(context) {
             }
         }
         return super.onTouchEvent(event)
+    }
+
+    // PLAN 7 P0-3: Cleanup Handler when view is detached (prevents leak)
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        isBackspaceRepeating = false
+        touchHandler.removeCallbacks(backspaceRepeatRunnable)
     }
 
     private fun findKeyAt(x: Int, y: Int): KeyRect? {

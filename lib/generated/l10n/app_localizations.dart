@@ -154,6 +154,7 @@ class AppLocalizations {
   String get settingsSecuritySection => _t('settingsSecuritySection');
   String get settingsCaptureSection => _t('settingsCaptureSection');
   String get settingsStatsSection => _t('settingsStatsSection');
+  String get settingsKeyboardBgColor => _t('settingsKeyboardBgColor');
 
   // ---- Export/Restore dialogs ----
   String get exportDialogPassphraseTitle =>

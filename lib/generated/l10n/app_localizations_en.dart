@@ -104,6 +104,7 @@ const Map<String, String> appStringsEn = {
   'settingsSecuritySection': 'Security',
   'settingsCaptureSection': 'Logging',
   'settingsStatsSection': 'Statistics (local only)',
+  'settingsKeyboardBgColor': 'Keyboard background color',
   'exportDialogPassphraseTitle': 'Enter passphrase for backup',
   'exportDialogPassphraseLabel': 'Passphrase (your choice)',
   'exportDialogPassphraseWarning':

@@ -47,6 +47,7 @@ class SmartClipboardIME : InputMethodService() {
     // In-memory trigger map: trigger_text → content
     private var triggerMap = mutableMapOf<String, String>()
     private var lastCacheVersion = 0L
+    private var keyboardBgColorHex = "#FFFFFF" // PLAN 7 P1-5
 
     // Typing buffer — accumulates characters for trigger detection
     private val typingBuffer = StringBuilder()
@@ -243,6 +244,17 @@ class SmartClipboardIME : InputMethodService() {
             -6 -> {
                 keyboardView.toggleSymbolLayer()
             }            else -> {
+                // PLAN 7 P0-1: Route word-boundary punctuation through handleDelimiter()
+                // to avoid commitText replacing active Telex composing region.
+                val previewCh = keyboardView.getCharForKey(keyCode)
+                if (previewCh != null && previewCh.length == 1) {
+                    val wordBoundaryChars = setOf(',', '.', '!', '?', ';', ':')
+                    if (previewCh[0] in wordBoundaryChars) {
+                        handleDelimiter(ic, previewCh[0])
+                        return
+                    }
+                }
+
                 // Regular character
                 val ch = keyboardView.getCharForKey(keyCode) ?: return
 
@@ -476,10 +488,11 @@ class SmartClipboardIME : InputMethodService() {
         val popup = PopupWindow(tv, popupWidth, popupHeight, false)
         keyPreviewPopup = popup
 
-        // Position: centered above the key
+        // Position: centered above the key, clamped to screen bounds
         val loc = IntArray(2)
         keyboardView.getLocationOnScreen(loc)
-        val x = loc[0] + keyRect.centerX() - popupWidth / 2
+        val x = (loc[0] + keyRect.centerX() - popupWidth / 2)
+            .coerceIn(0, maxOf(0, resources.displayMetrics.widthPixels - popupWidth))
         val y = loc[1] + keyRect.top - popupHeight - 8
 
         popup.showAtLocation(keyboardView, Gravity.NO_GRAVITY, x, y)
@@ -532,6 +545,15 @@ class SmartClipboardIME : InputMethodService() {
             val obj = JSONObject(json)
 
             lastCacheVersion = obj.optLong("cache_version", 0)
+
+            // PLAN 7 P1-5: Read keyboard background color
+            keyboardBgColorHex = obj.optString("keyboard_bg_color", "#FFFFFF")
+            try {
+                val bgColor = android.graphics.Color.parseColor(keyboardBgColorHex)
+                keyboardView.setKeyboardBackgroundColor(bgColor)
+            } catch (_: Exception) {
+                keyboardView.setKeyboardBackgroundColor(android.graphics.Color.WHITE)
+            }
 
             val triggers = obj.optJSONObject("triggers") ?: JSONObject()
             triggerMap.clear()
