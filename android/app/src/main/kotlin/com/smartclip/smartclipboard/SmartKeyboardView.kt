@@ -220,16 +220,30 @@ class SmartKeyboardView(context: Context) : View(context) {
         return key.copy(label = display)
     }
 
+    companion object {
+        private const val MIN_ROW_HEIGHT_DP = 36
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val scale = resources.displayMetrics.density
-        val mh = (keyHeight * scale).toInt()
         val mm = (keyMargin * scale).toInt()
         val mp = (keyboardPadding * scale).toInt()
+        val minRowHeight = (MIN_ROW_HEIGHT_DP * scale).toInt()
 
-        val desiredHeight = mh * 4 + mm * 3 + mp * 2
+        val desiredRowHeight = (keyHeight * scale).toInt()
+        val desiredHeight = desiredRowHeight * 4 + mm * 3 + mp * 2
         val width = MeasureSpec.getSize(widthMeasureSpec)
 
-        setMeasuredDimension(width, desiredHeight)
+        // PLAN 9 P0-4: respect heightMeasureSpec — AT_MOST is a hard ceiling
+        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
+        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
+        val resolvedHeight = when (heightMode) {
+            MeasureSpec.EXACTLY -> heightSize
+            MeasureSpec.AT_MOST -> minOf(desiredHeight, heightSize)
+            else -> desiredHeight // UNSPECIFIED
+        }
+
+        setMeasuredDimension(width, resolvedHeight)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -247,28 +261,37 @@ class SmartKeyboardView(context: Context) : View(context) {
 
         val w = width.toFloat()
         val scale = resources.displayMetrics.density
-        val mh = (keyHeight * scale).toInt()
         val mm = (keyMargin * scale).toInt()
         val mp = (keyboardPadding * scale).toInt()
+
+        // PLAN 9 P0-5: Compute rowHeight from measured height, not fixed keyHeight
+        val availableHeight = height - 2 * mp - 3 * mm
+        val rowHeight = (availableHeight / 4).coerceAtLeast(0)
 
         var y = mp.toFloat()
 
         if (currentLayer == KeyboardLayer.LETTERS) {
-            drawRow(canvas, row1, y, w, mp, mm, mh, scale)
-            y += mh + mm
-            drawRowCentered(canvas, row2, y, w, mp, mm, mh, scale)
-            y += mh + mm
-            drawRow3(canvas, y, w, mp, mm, mh, scale)
-            y += mh + mm
-            drawRow4(canvas, y, w, mp, mm, mh, scale)
+            drawRow(canvas, row1, y, w, mp, mm, rowHeight, scale)
+            y += rowHeight + mm
+            drawRowCentered(canvas, row2, y, w, mp, mm, rowHeight, scale)
+            y += rowHeight + mm
+            drawRow3(canvas, y, w, mp, mm, rowHeight, scale)
+            y += rowHeight + mm
+            drawRow4(canvas, y, w, mp, mm, rowHeight, scale)
         } else {
-            drawRow(canvas, symbolRow1, y, w, mp, mm, mh, scale)
-            y += mh + mm
-            drawRow(canvas, symbolRow2, y, w, mp, mm, mh, scale)
-            y += mh + mm
-            drawSymbolRow3(canvas, y, w, mp, mm, mh, scale)   // BUG 2 FIX: Backspace on symbol row 3
-            y += mh + mm
-            drawSymbolRow4(canvas, y, w, mp, mm, mh, scale)
+            drawRow(canvas, symbolRow1, y, w, mp, mm, rowHeight, scale)
+            y += rowHeight + mm
+            drawRow(canvas, symbolRow2, y, w, mp, mm, rowHeight, scale)
+            y += rowHeight + mm
+            drawSymbolRow3(canvas, y, w, mp, mm, rowHeight, scale)
+            y += rowHeight + mm
+            drawSymbolRow4(canvas, y, w, mp, mm, rowHeight, scale)
+        }
+
+        // PLAN 9: Debug-only overflow invariant check (Log.w, no crash in production)
+        val lastRect = keyRects.lastOrNull()?.rect
+        if (lastRect != null && (lastRect.right > width || lastRect.bottom > height)) {
+            android.util.Log.w("SmartKeyboardView", "Key overflow: $lastRect vs bounds ${width}x${height}")
         }
     }
 
@@ -312,7 +335,8 @@ class SmartKeyboardView(context: Context) : View(context) {
     ) {
         val shiftKey = Key("⇧", -5, true)
         val backspaceKey = Key("⌫", -1, true)
-        val letterWidth = ((totalWidth - 2 * pad - 2 * margin - 2 * (60 * scale)) / 7).toInt()
+        // PLAN 9 P0-3: 8 margins (1 after Shift + 6 between 7 letters + 1 before Backspace)
+        val letterWidth = ((totalWidth - 2 * pad - 8 * margin - 2 * (60 * scale)) / 7).toInt()
         val specialWidth = (60 * scale).toInt()
 
         var x = pad.toFloat()
@@ -343,8 +367,10 @@ class SmartKeyboardView(context: Context) : View(context) {
         pad: Int, margin: Int, height: Int, scale: Float
     ) {
         val specialWidth = (80 * scale).toInt()
-        val spaceWidth = (totalWidth - 2 * pad - 2 * margin - 2 * specialWidth - 2 * margin - 2 * margin).toInt()
+        val commaWidth = (40 * scale).toInt()
         val periodWidth = (50 * scale).toInt()
+        // PLAN 9 P0-1: subtract commaWidth + periodWidth (previously forgotten)
+        val spaceWidth = (totalWidth - 2 * pad - 4 * margin - 2 * specialWidth - commaWidth - periodWidth).toInt()
 
         var x = pad.toFloat()
 
@@ -355,11 +381,10 @@ class SmartKeyboardView(context: Context) : View(context) {
         keyRects.add(KeyRect(r1, switchKey))
         x += specialWidth + margin
 
-        // ,
-        val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + (40 * scale).toInt(), y.toInt() + height)
-        drawKey(canvas, commaRect, row4[1], scale)
-        keyRects.add(KeyRect(commaRect, row4[1]))
-        x += (40 * scale).toInt() + margin
+        // ,            val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + commaWidth, y.toInt() + height)
+            drawKey(canvas, commaRect, row4[1], scale)
+            keyRects.add(KeyRect(commaRect, row4[1]))
+            x += commaWidth + margin
 
         // Space
         val spaceRect = Rect(x.toInt(), y.toInt(), x.toInt() + spaceWidth, y.toInt() + height)
@@ -412,8 +437,10 @@ class SmartKeyboardView(context: Context) : View(context) {
         pad: Int, margin: Int, height: Int, scale: Float
     ) {
         val specialWidth = (80 * scale).toInt()
-        val spaceWidth = (totalWidth - 2 * pad - 2 * margin - 2 * specialWidth - 2 * margin - 2 * margin).toInt()
+        val commaWidth = (40 * scale).toInt()
         val periodWidth = (50 * scale).toInt()
+        // PLAN 9 P0-2: same fix as drawRow4 — subtract commaWidth + periodWidth
+        val spaceWidth = (totalWidth - 2 * pad - 4 * margin - 2 * specialWidth - commaWidth - periodWidth).toInt()
 
         var x = pad.toFloat()
 
@@ -423,11 +450,10 @@ class SmartKeyboardView(context: Context) : View(context) {
         keyRects.add(KeyRect(r1, symbolRow4[0]))
         x += specialWidth + margin
 
-        // ,
-        val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + (40 * scale).toInt(), y.toInt() + height)
-        drawKey(canvas, commaRect, symbolRow4[1], scale)
-        keyRects.add(KeyRect(commaRect, symbolRow4[1]))
-        x += (40 * scale).toInt() + margin
+        // ,            val commaRect = Rect(x.toInt(), y.toInt(), x.toInt() + commaWidth, y.toInt() + height)
+            drawKey(canvas, commaRect, symbolRow4[1], scale)
+            keyRects.add(KeyRect(commaRect, symbolRow4[1]))
+            x += commaWidth + margin
 
         // Space
         val spaceRect = Rect(x.toInt(), y.toInt(), x.toInt() + spaceWidth, y.toInt() + height)

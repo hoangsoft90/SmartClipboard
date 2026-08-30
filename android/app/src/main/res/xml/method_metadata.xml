@@ -5,8 +5,4 @@
         android:label="English"
         android:imeSubtypeLocale="en_US"
         android:imeSubtypeMode="keyboard" />
-    <subtype
-        android:label="Tiếng Việt"
-        android:imeSubtypeLocale="vi_VN"
-        android:imeSubtypeMode="keyboard" />
 </input-method>
