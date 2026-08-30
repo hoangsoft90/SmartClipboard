@@ -53,12 +53,14 @@ class SmartKeyboardView(context: Context) : View(context) {
     private var isShifted = false
     private var currentLayer = KeyboardLayer.LETTERS
 
-    // PLAN 7 P0-2: Backspace long-press repeat state
+    // PLAN 7 P0-2 + PLAN 8 BUG 1: Backspace long-press repeat state
     private var isBackspaceRepeating = false
+    private var backspaceHasRepeated = false  // PLAN 8 BUG 1: tracks if Runnable actually fired
     private val touchHandler = Handler(Looper.getMainLooper())
     private val backspaceRepeatRunnable = object : Runnable {
         override fun run() {
             if (isBackspaceRepeating) {
+                backspaceHasRepeated = true   // PLAN 8 BUG 1: mark that repeat happened
                 listener?.onKeyPress(-1) // Backspace key code
                 touchHandler.postDelayed(this, 70) // Repeat interval
             }
@@ -496,9 +498,10 @@ class SmartKeyboardView(context: Context) : View(context) {
                     previewListener?.onKeyPreview(key.key.label, key.rect)
                 }
                 // PLAN 7 P0-2: Start backspace repeat on long-press
+                // PLAN 8 BUG 1 FIX: reset backspaceHasRepeated on each new press
                 if (key != null && key.key.keyCode == -1) {
                     isBackspaceRepeating = true
-                    // Fire first repeat after 400ms delay, then 70ms interval
+                    backspaceHasRepeated = false   // PLAN 8 BUG 1: reset for new press
                     touchHandler.postDelayed(backspaceRepeatRunnable, 400)
                 }
                 return true
@@ -522,6 +525,12 @@ class SmartKeyboardView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_UP -> {
                 val key = findKeyAt(event.x.toInt(), event.y.toInt())
+                val wasRepeating = isBackspaceRepeating  // PLAN 8 BUG 1: save BEFORE reset
+
+                // PLAN 8 BUG 1 FIX: stop repeat + cleanup on finger lift
+                isBackspaceRepeating = false
+                touchHandler.removeCallbacks(backspaceRepeatRunnable)
+
                 pressedKey = null
                 invalidate()
                 previewListener?.onKeyPreviewDismissed()
@@ -531,7 +540,11 @@ class SmartKeyboardView(context: Context) : View(context) {
                         performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                     } catch (_: Exception) {}
 
-                    listener?.onKeyPress(key.key.keyCode)
+                    // PLAN 8 BUG 1 FIX: if repeat already fired at least once,
+                    // don't fire extra onKeyPress on UP — avoid deleting extra char.
+                    if (!(key.key.keyCode == -1 && backspaceHasRepeated)) {
+                        listener?.onKeyPress(key.key.keyCode)
+                    }
                 }
                 return true
             }

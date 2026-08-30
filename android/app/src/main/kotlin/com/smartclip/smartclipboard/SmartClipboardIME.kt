@@ -53,6 +53,8 @@ class SmartClipboardIME : InputMethodService() {
     private val typingBuffer = StringBuilder()
 
     // Phase 4D: Language state
+    // PLAN 8 BUG 2 FIX:冻结 Vietnamese — giữ enum để dễ khôi phục sau này,
+    // nhưng luôn cố định EN, không còn đường nào đổi sang VI.
     enum class InputLanguage { EN, VI }
     private var currentLanguage = InputLanguage.EN
     private var telexProcessor: VietnameseTelexProcessor? = null
@@ -246,9 +248,11 @@ class SmartClipboardIME : InputMethodService() {
             }            else -> {
                 // PLAN 7 P0-1: Route word-boundary punctuation through handleDelimiter()
                 // to avoid commitText replacing active Telex composing region.
+                // PLAN 8 BUG 0 FIX: KHÔNG gồm ';' — đây là PREFIX trigger snippet;
+                // KHÔNG gồm ':' — không có lý do sản phẩm cần ':' là delimiter.
                 val previewCh = keyboardView.getCharForKey(keyCode)
                 if (previewCh != null && previewCh.length == 1) {
-                    val wordBoundaryChars = setOf(',', '.', '!', '?', ';', ':')
+                    val wordBoundaryChars = setOf(',', '.', '!', '?')
                     if (previewCh[0] in wordBoundaryChars) {
                         handleDelimiter(ic, previewCh[0])
                         return
@@ -258,30 +262,8 @@ class SmartClipboardIME : InputMethodService() {
                 // Regular character
                 val ch = keyboardView.getCharForKey(keyCode) ?: return
 
-                // Phase 4D.4: Vietnamese Telex mode
-                if (currentLanguage == InputLanguage.VI && ch.length == 1 && ch[0].isLetter()) {
-                    // BUG 3 FIX: if there's a selection, delete it before starting
-                    // composing — setComposingText does NOT auto-replace selection
-                    // like commitText does.
-                    val selected = ic.getSelectedText(0)
-                    if (!selected.isNullOrEmpty()) {
-                        ic.commitText("", 1)
-                        typingBuffer.clear()
-                    }
-                    // Ensure telex processor exists
-                    if (telexProcessor == null) {
-                        telexProcessor = VietnameseTelexProcessor()
-                    } else {
-                        telexProcessor!!.reset()   // clean state if we just cleared selection
-                    }
-                    val composingText = telexProcessor!!.onChar(ch[0])
-                    typingBuffer.append(ch)
-                    ic.setComposingText(composingText, 1)
-                    lastCommittedChar = composingText.lastOrNull()
-                    lastWasSpace = false
-                    updateSuggestions(typingBuffer.toString())
-                    return
-                }
+                // PLAN 8 BUG 2 FIX: Vietnamese Telex mode —冻结。
+                // Current code flow goes straight to EN character handling below.
 
                 // FIX 5.2: Handle ;; escape
                 if (ch == ";" && typingBuffer.isNotEmpty() && typingBuffer.last() == ';') {
@@ -333,11 +315,7 @@ class SmartClipboardIME : InputMethodService() {
      * Check if typing buffer contains a trigger — if so, replace.
      */
     private fun handleDelimiter(ic: InputConnection, delimiter: Char) {
-        // Phase 4D.4: If Vietnamese Telex is composing, commit the telex word first
-        if (currentLanguage == InputLanguage.VI && telexProcessor != null && !telexProcessor!!.isEmpty()) {
-            ic.finishComposingText()
-            telexProcessor!!.commit()
-        }
+        // PLAN 8 BUG 2 FIX: Vietnamese Telex delimiter — frozen (EN-only).
 
         if (typingBuffer.isEmpty()) {
             // Nothing to check — just commit delimiter
@@ -385,22 +363,7 @@ class SmartClipboardIME : InputMethodService() {
             return
         }
 
-        // Phase 4D.4: Vietnamese Telex backspace
-        if (currentLanguage == InputLanguage.VI && telexProcessor != null && !telexProcessor!!.isEmpty()) {
-            val composingText = telexProcessor!!.onBackspace()
-            if (typingBuffer.isNotEmpty()) {
-                typingBuffer.deleteCharAt(typingBuffer.length - 1)
-            }
-            if (composingText.isNotEmpty()) {
-                ic.setComposingText(composingText, 1)
-            } else {
-                ic.finishComposingText()
-                ic.deleteSurroundingText(1, 0)
-            }
-            updateSuggestions(typingBuffer.toString())
-            lastCommittedChar = null
-            return
-        }
+        // PLAN 8 BUG 2 FIX: Vietnamese Telex backspace — frozen (EN-only).
 
         if (typingBuffer.isNotEmpty()) {
             typingBuffer.deleteCharAt(typingBuffer.length - 1)
@@ -442,12 +405,8 @@ class SmartClipboardIME : InputMethodService() {
                 emojiTrayView?.visibility = if (isEmojiTrayVisible) View.VISIBLE else View.GONE
             }
             "LANG" -> {
-                // Phase 4D.2: Toggle EN/VI
-                currentLanguage = if (currentLanguage == InputLanguage.EN) InputLanguage.VI else InputLanguage.EN
-                toolbar.setLanguage(if (currentLanguage == InputLanguage.VI) "VI" else "EN")
-                telexProcessor?.reset()
-                typingBuffer.clear()
-                updateSuggestions("")
+                // PLAN 8 BUG 2 FIX: LANG toggle removed — Vietnamese frozen.
+                // This shortcut is no longer reachable (button removed from toolbar).
             }
             "SWITCH_KEYBOARD" -> {
                 // HANG MUC 4: Open system input method picker
@@ -684,23 +643,12 @@ class SuggestionStrip(context: Context) : LinearLayout(context) {
 
 class QuickToolbar(context: Context, private val onShortcut: (String) -> Unit) : LinearLayout(context) {
 
-    private val langBtn: TextView
-
     init {
         orientation = HORIZONTAL
         setPadding(4, 2, 4, 2)
         setBackgroundColor(0xFFF0F0F0.toInt())
 
-        // Phase 4D.2: EN/VI toggle
-        langBtn = TextView(context).apply {
-            text = "EN"
-            setPadding(16, 8, 16, 8)
-            textSize = 13f
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF1976D2.toInt())
-            setOnClickListener { onShortcut("LANG") }
-        }
-        addView(langBtn)
+        // PLAN 8 BUG 2 FIX: EN/VI toggle removed — Vietnamese frozen (EN-only).
 
         val shortcuts: List<Pair<String, String>> = listOf(
             ";" to ";",
@@ -766,9 +714,6 @@ class QuickToolbar(context: Context, private val onShortcut: (String) -> Unit) :
         addView(switchKeyboardBtn)
     }
 
-    fun setLanguage(lang: String) {
-        langBtn.text = lang
-    }
 }
 
 // ================================================================
