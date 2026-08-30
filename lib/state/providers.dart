@@ -403,3 +403,98 @@ class LocaleController extends StateNotifier<Locale?> {
 
 /// Helper dùng chung: hash nội dung (để kiểm tra dedup ngoài repository nếu cần).
 String hashOf(String raw) => contentHash(raw);
+
+// --------------------------- Clipboard Filter (Batch 2) ---------------------------
+
+class ClipboardFilterState {
+  final String query;
+  final bool favoriteOnly;
+  final bool pinnedOnly;
+
+  const ClipboardFilterState({
+    this.query = '',
+    this.favoriteOnly = false,
+    this.pinnedOnly = false,
+  });
+
+  ClipboardFilterState copyWith({
+    String? query,
+    bool? favoriteOnly,
+    bool? pinnedOnly,
+  }) =>
+      ClipboardFilterState(
+        query: query ?? this.query,
+        favoriteOnly: favoriteOnly ?? this.favoriteOnly,
+        pinnedOnly: pinnedOnly ?? this.pinnedOnly,
+      );
+}
+
+final clipboardFilterProvider =
+    StateProvider<ClipboardFilterState>((ref) => const ClipboardFilterState());
+
+/// Provider phái sinh — KHÔNG đụng ClipboardListController.
+/// Tự động re-tính mỗi khi list gốc HOẶC filter đổi.
+final visibleClipboardItemsProvider = Provider<List<ClipboardItem>>((ref) {
+  final items = ref.watch(clipboardListProvider).value ?? const <ClipboardItem>[];
+  final f = ref.watch(clipboardFilterProvider);
+
+  return items.where((item) {
+    if (f.favoriteOnly && !item.isFavorite) return false;
+    if (f.pinnedOnly && !item.isPinned) return false;
+    if (f.query.isNotEmpty &&
+        !item.content.toLowerCase().contains(f.query.toLowerCase())) {
+      return false;
+    }
+    return true;
+  }).toList();
+});
+
+// --------------------------- Snippet Filter (Batch 3) ---------------------------
+
+/// Trạng thái filter snippet: All, Enabled, Disabled.
+enum SnippetFilterMode { all, enabled, disabled }
+
+class SnippetFilterState {
+  final String query;
+  final SnippetFilterMode mode;
+  final String? folderId;
+
+  const SnippetFilterState({
+    this.query = '',
+    this.mode = SnippetFilterMode.all,
+    this.folderId,
+  });
+
+  SnippetFilterState copyWith({
+    String? query,
+    SnippetFilterMode? mode,
+    String? Function()? folderId,
+  }) =>
+      SnippetFilterState(
+        query: query ?? this.query,
+        mode: mode ?? this.mode,
+        folderId: folderId != null ? folderId() : this.folderId,
+      );
+}
+
+final snippetFilterProvider =
+    StateProvider<SnippetFilterState>((ref) => const SnippetFilterState());
+
+final visibleSnippetsProvider = Provider<List<Snippet>>((ref) {
+  final items = ref.watch(snippetListProvider).value ?? const <Snippet>[];
+  final f = ref.watch(snippetFilterProvider);
+
+  return items.where((s) {
+    if (f.mode == SnippetFilterMode.enabled && !s.isEnabled) return false;
+    if (f.mode == SnippetFilterMode.disabled && s.isEnabled) return false;
+    if (f.folderId != null && s.folderId != f.folderId) return false;
+    if (f.query.isNotEmpty) {
+      final q = f.query.toLowerCase();
+      final match = s.title.toLowerCase().contains(q) ||
+          s.trigger.toLowerCase().contains(q) ||
+          s.content.toLowerCase().contains(q);
+      if (!match) return false;
+    }
+    return true;
+  }).toList();
+});

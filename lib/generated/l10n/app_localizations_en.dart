@@ -167,4 +167,11 @@ const Map<String, String> appStringsEn = {
   'timeAgoMinutes': '{minutes}m ago',
   'timeAgoHours': '{hours}h ago',
   'timeAgoDays': '{days}d ago',
+  'searchClipboardHint': 'Search clipboard...',
+  'searchSnippetsHint': 'Search snippets...',
+  'filterAll': 'All',
+  'filterFavorites': 'Favorites',
+  'filterPinned': 'Pinned',
+  'filterEnabled': 'Enabled',
+  'filterDisabled': 'Disabled',
 };

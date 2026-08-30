@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +19,8 @@ class ClipboardHistoryScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final listAsync = ref.watch(clipboardListProvider);
     final settings = ref.watch(appSettingsProvider);
+    final visibleItems = ref.watch(visibleClipboardItemsProvider);
+    final filter = ref.watch(clipboardFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -47,11 +51,57 @@ class ClipboardHistoryScreen extends ConsumerWidget {
             ),
           ),
         const ProUpgradeBanner(),
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: _ClipboardSearchBar(
+            initialQuery: filter.query,
+            onChanged: (value) {
+              ref.read(clipboardFilterProvider.notifier).state =
+                  filter.copyWith(query: value);
+            },
+          ),
+        ),
+        // Filter chips
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  label: Text(l10n.filterAll),
+                  selected: !filter.favoriteOnly && !filter.pinnedOnly,
+                  onSelected: (_) => ref
+                      .read(clipboardFilterProvider.notifier)
+                      .state = filter.copyWith(
+                          favoriteOnly: false, pinnedOnly: false),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.filterFavorites),
+                  selected: filter.favoriteOnly,
+                  onSelected: (v) => ref
+                      .read(clipboardFilterProvider.notifier)
+                      .state = filter.copyWith(favoriteOnly: v),
+                ),
+                ChoiceChip(
+                  label: Text(l10n.filterPinned),
+                  selected: filter.pinnedOnly,
+                  onSelected: (v) => ref
+                      .read(clipboardFilterProvider.notifier)
+                      .state = filter.copyWith(pinnedOnly: v),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
         Expanded(
           child: listAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text(l10n.clipboardLoadError)),
-            data: (items) => items.isEmpty
+            data: (_) => visibleItems.isEmpty
                 ? Center(
                     child: Text(l10n.clipboardEmpty,
                         textAlign: TextAlign.center))
@@ -60,15 +110,63 @@ class ClipboardHistoryScreen extends ConsumerWidget {
                       await ref.read(clipboardListProvider.notifier).reload();
                     },
                     child: ListView.separated(
-                      itemCount: items.length,
+                      itemCount: visibleItems.length,
                       separatorBuilder: (_, __) =>
                           const Divider(height: 1),
-                      itemBuilder: (ctx, i) => _ItemTile(item: items[i]),
+                      itemBuilder: (ctx, i) =>
+                          _ItemTile(item: visibleItems[i]),
                     ),
                   ),
           ),
         ),
       ]),
+    );
+  }
+}
+
+class _ClipboardSearchBar extends StatefulWidget {
+  final String initialQuery;
+  final ValueChanged<String> onChanged;
+  const _ClipboardSearchBar({required this.initialQuery, required this.onChanged});
+
+  @override
+  State<_ClipboardSearchBar> createState() => _ClipboardSearchBarState();
+}
+
+class _ClipboardSearchBarState extends State<_ClipboardSearchBar> {
+  Timer? _debounce;
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialQuery);
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(
+        hintText: l10n.searchClipboardHint,
+        prefixIcon: const Icon(Icons.search),
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onChanged: (value) {
+        _debounce?.cancel();
+        _debounce = Timer(const Duration(milliseconds: 300), () {
+          widget.onChanged(value);
+        });
+      },
     );
   }
 }
@@ -119,46 +217,73 @@ class _ItemTile extends ConsumerWidget {
         ],
       ]),
       leading: _RiskBadge(score: item.privacyRiskScore),
-      trailing: PopupMenuButton<String>(
-        onSelected: (action) async {
-          final controller = ref.read(clipboardListProvider.notifier);
-          switch (action) {
-            case 'pin':
-              await controller.togglePin(item);
-            case 'favorite':
-              await controller.toggleFavorite(item);
-            case 'copy':
-              await ref.read(clipboardServiceProvider).copyToSystem(item);
-              await controller.reload();
-            case 'snippet':
-              if (context.mounted) {
-                await showSaveSnippetDialog(context, ref,
-                    initialContent: item.content);
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              item.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+              size: 20,
+              color: item.isPinned ? theme.colorScheme.primary : null,
+            ),
+            tooltip: item.isPinned ? l10n.popupUnpin : l10n.popupPin,
+            onPressed: () =>
+                ref.read(clipboardListProvider.notifier).togglePin(item),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            icon: Icon(
+              item.isFavorite ? Icons.star : Icons.star_border,
+              size: 20,
+              color: item.isFavorite ? Colors.amber : null,
+            ),
+            tooltip: item.isFavorite ? l10n.popupUnfavorite : l10n.popupFavorite,
+            onPressed: () =>
+                ref.read(clipboardListProvider.notifier).toggleFavorite(item),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (action) async {
+              final controller = ref.read(clipboardListProvider.notifier);
+              switch (action) {
+                case 'pin':
+                  await controller.togglePin(item);
+                case 'favorite':
+                  await controller.toggleFavorite(item);
+                case 'copy':
+                  await ref.read(clipboardServiceProvider).copyToSystem(item);
+                  await controller.reload();
+                case 'snippet':
+                  if (context.mounted) {
+                    await showSaveSnippetDialog(context, ref,
+                        initialContent: item.content);
+                  }
+                case 'archive':
+                  await controller.archiveItem(item.id);
+                case 'delete':
+                  await controller.deleteForever(item.id);
+                case 'expiration':
+                  await _suggest24hExpiry(ref);
               }
-            case 'archive':
-              await controller.archiveItem(item.id);
-            case 'delete':
-              await controller.deleteForever(item.id);
-            case 'expiration':
-              await _suggest24hExpiry(ref);
-          }
-        },
-        itemBuilder: (_) => [
-          PopupMenuItem(
-            value: 'pin',
-            child: Text(item.isPinned ? l10n.popupUnpin : l10n.popupPin),
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'pin',
+                child: Text(item.isPinned ? l10n.popupUnpin : l10n.popupPin),
+              ),
+              PopupMenuItem(
+                value: 'favorite',
+                child: Text(item.isFavorite ? l10n.popupUnfavorite : l10n.popupFavorite),
+              ),
+              PopupMenuItem(value: 'copy', child: Text(l10n.popupCopyAgain)),
+              PopupMenuItem(value: 'snippet', child: Text(l10n.popupSaveAsSnippet)),
+              if (item.privacyRiskScore >= 1)
+                PopupMenuItem(
+                    value: 'expiration', child: Text(l10n.popupDeleteAfter24h)),
+              PopupMenuItem(value: 'archive', child: Text(l10n.popupHideFromHistory)),
+              PopupMenuItem(value: 'delete', child: Text(l10n.popupDeletePermanently)),
+            ],
           ),
-          PopupMenuItem(
-            value: 'favorite',
-            child: Text(item.isFavorite ? l10n.popupUnfavorite : l10n.popupFavorite),
-          ),
-          PopupMenuItem(value: 'copy', child: Text(l10n.popupCopyAgain)),
-          PopupMenuItem(value: 'snippet', child: Text(l10n.popupSaveAsSnippet)),
-          if (item.privacyRiskScore >= 1)
-            PopupMenuItem(
-                value: 'expiration', child: Text(l10n.popupDeleteAfter24h)),
-          PopupMenuItem(value: 'archive', child: Text(l10n.popupHideFromHistory)),
-          PopupMenuItem(value: 'delete', child: Text(l10n.popupDeletePermanently)),
         ],
       ),
     );

@@ -166,4 +166,11 @@ const Map<String, String> appStringsVi = {
   'timeAgoMinutes': '{minutes} phút trước',
   'timeAgoHours': '{hours} giờ trước',
   'timeAgoDays': '{days} ngày trước',
+  'searchClipboardHint': 'Tìm trong clipboard...',
+  'searchSnippetsHint': 'Tìm snippet...',
+  'filterAll': 'Tất cả',
+  'filterFavorites': 'Yêu thích',
+  'filterPinned': 'Đã ghim',
+  'filterEnabled': 'Đang bật',
+  'filterDisabled': 'Đã tắt',
 };

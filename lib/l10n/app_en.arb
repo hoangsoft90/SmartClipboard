@@ -164,5 +164,13 @@
   "timeAgoJustNow": "just now",
   "timeAgoMinutes": "{minutes}m ago",
   "timeAgoHours": "{hours}h ago",
-  "timeAgoDays": "{days}d ago"
+  "timeAgoDays": "{days}d ago",
+
+  "searchClipboardHint": "Search clipboard...",
+  "searchSnippetsHint": "Search snippets...",
+  "filterAll": "All",
+  "filterFavorites": "Favorites",
+  "filterPinned": "Pinned",
+  "filterEnabled": "Enabled",
+  "filterDisabled": "Disabled"
 }

@@ -238,6 +238,15 @@ class AppLocalizations {
       _t('timeAgoHours', {'hours': '$hours'});
   String timeAgoDays(int days) =>
       _t('timeAgoDays', {'days': '$days'});
+
+  // ---- Search & Filter ----
+  String get searchClipboardHint => _t('searchClipboardHint');
+  String get searchSnippetsHint => _t('searchSnippetsHint');
+  String get filterAll => _t('filterAll');
+  String get filterFavorites => _t('filterFavorites');
+  String get filterPinned => _t('filterPinned');
+  String get filterEnabled => _t('filterEnabled');
+  String get filterDisabled => _t('filterDisabled');
 }
 
 class _AppLocalizationsDelegate
