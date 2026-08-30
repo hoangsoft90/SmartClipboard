@@ -2,18 +2,18 @@
 
 ## Purpose
 
-Settings toàn cục của app (expiration days, pause capture, biometric lock, onboarding done) được persist vào bảng `app_meta` qua `MetaDao` và expose ra UI bằng một StateNotifier Riverpod duy nhất — thống nhất với nguyên tắc "Riverpod toàn app, không setState tự do ở màn hình chính".
+Settings toàn cục của app (expiration days, pause capture, biometric lock, onboarding done, keyboard background color, app language) được persist vào bảng `app_meta` qua `MetaDao` và expose ra UI bằng StateNotifier Riverpod — thống nhất với nguyên tắc "Riverpod toàn app, không setState tự do ở màn hình chính".
 
 ## Requirements
 
 ### Requirement: Load một lần lúc khởi động
 
-`AppSettingsController` (file: `lib/state/providers.dart`) constructor gọi `_load()` async đọc 4 key từ app_meta; trong khi load, state mặc định có `loaded = false` — RootGate hiển thị splash thay vì flash nháy HomeScreen/Onboarding sai.
+`AppSettingsController` (file: `lib/state/providers.dart`) constructor gọi `_load()` async đọc 6 key từ app_meta: `expiration_days`, `capture_paused`, `biometric_lock`, `onboarding_done`, `keyboard_bg_color`, `app_language`; trong khi load, state mặc định có `loaded = false` — RootGate hiển thị splash thay vì flash nháy HomeScreen/Onboarding sai.
 
 #### Scenario: Khởi động app
-- **GIVEN** app_meta có expiration_days=7, biometric_lock=1, onboarding_done=1
+- **GIVEN** app_meta có expiration_days=7, biometric_lock=1, onboarding_done=1, keyboard_bg_color=#FFFFFF, app_language=vi
 - **WHEN** controller khởi tạo rồi _load() hoàn tất
-- **THEN** state = AppSettings(expirationDays: 7, biometricLock: true, onboardingDone: true, loaded: true).
+- **THEN** state = AppSettings(expirationDays: 7, biometricLock: true, onboardingDone: true, keyboardBgColor: '#FFFFFF', loaded: true).
 
 #### Scenario: Giá trị expiration không hợp lệ trong DB
 - **GIVEN** expiration_days = 99 (ngoài [1,7,30])
@@ -22,7 +22,7 @@ Settings toàn cục của app (expiration days, pause capture, biometric lock, 
 
 ### Requirement: Mọi setter persist trước khi đổi state
 
-`setExpirationDays`, `setCapturePaused`, `setBiometricLock`, `completeOnboarding`: ghi app_meta TRƯỚC, sau đó mới `state = state.copyWith(...)`. Không có setter nào chỉ đổi state mà không persist.
+`setExpirationDays`, `setCapturePaused`, `setBiometricLock`, `completeOnboarding`, `setKeyboardBgColor`: ghi app_meta TRƯỚC, sau đó mới `state = state.copyWith(...)`. Không có setter nào chỉ đổi state mà không persist.
 
 #### Scenario: Bật pause mode
 - **WHEN** `setCapturePaused(true)`

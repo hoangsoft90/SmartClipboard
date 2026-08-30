@@ -47,5 +47,5 @@ Payload backup KHÔNG chứa app_meta → metrics reset khi restore. Không có 
 
 ## Cần làm rõ
 
-- `markActiveToday()` parse chuỗi comma-separated mỗi lần gọi và append nếu thiếu — với usage dài nhiều năm chuỗi sẽ dài dần (vẫn hoạt động nhưng O(n)). Chấp nhận hay đổi sang đếm số + ngày cuối?
-- Settings summary dùng FutureBuilder đọc trực tiếp `ref.read(metricsProvider).summary()` mỗi build — không tự refresh khi metric thay đổi khi đang mở tab (phải vào lại tab). Có cần reactive không?
+- `markActiveToday()` parse chuỗi comma-separated mỗi lần gọi và append nếu thiếu — với usage dài nhiều năm chuỗi sẽ dài dần (vẫn hoạt động nhưng O(n)). **Đã chấp nhận**: với usage thực tế (3-5 lần/tuần, mỗi lần 1 ngày), chuỗi sẽ dài ~300 entries sau 5 năm (~1.5KB) — không đáng kể.
+- Settings summary dùng FutureBuilder đọc trực tiếp `ref.read(metricsProvider).summary()` mỗi build — không tự refresh khi metric thay đổi khi đang mở tab (phải vào lại tab). **Đã chấp nhận**: user cần vào lại tab hoặc restart app để thấy metric mới nhất.

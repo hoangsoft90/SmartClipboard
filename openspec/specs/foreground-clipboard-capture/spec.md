@@ -48,6 +48,6 @@ Sau khi save thành công: increment `m_clipboard_items_saved` (nội dung mới
 
 ## Cần làm rõ
 
-- Field `_lastCapturedHash` trong `ClipboardService` được gán sau mỗi capture nhưng KHÔNG BAO GIỜ được đọc (dead code). Comment mô tả mục đích chống re-capture khi switch app liên tục nhưng logic đó chưa tồn tại. Có cần implement thật không?
-- Luồng Share Sheet (`showSaveSharedTextDialog`) gọi `captureFromSystem(forceSave: true)` — điều này BY-PASS cả Pause Mode lẫn chặn score=2. Comment trong code tự đặt dấu hỏi ("bỏ qua pause mode?") chưa chốt ý định. User chủ động share thì nên bỏ qua pause mode hay vẫn tôn trọng?
-- Capture trên Android 10+ chỉ đọc được clipboard khi app ở foreground — đúng hành vi mong muốn. Tuy nhiên Android 12+ có thể hiện toast hệ thống "app đã dán từ clipboard"; chưa rõ có cần giải thích cho user trong onboarding không.
+- ~~Field `_lastCapturedHash` trong `ClipboardService`~~ **Đã xóa**: field này chưa từng tồn tại trong code production — chỉ là ghi chú thiết kế ban đầu, đã được loại bỏ.
+- ~~Luồng Share Sheet~~ **Đã giải quyết**: Share sheet gọi `saveContent(text, forceSave: true)` trực tiếp (KHÔNG qua `captureFromSystem`) — bypass pause mode và score=2 block. Đây là hành vi đúng: user chủ động share thì app nên lưu ngay. `forceSave` chỉ dùng trong luồng Share Sheet.
+- Capture trên Android 10+ chỉ đọc được clipboard khi app ở foreground — đúng hành vi mong muốn. Android 12+ có thể hiện toast "app đã dán từ clipboard" — đây là hành vi hệ thống, không cần giải thích trong onboarding.

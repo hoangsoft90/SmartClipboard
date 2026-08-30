@@ -36,5 +36,5 @@ Tránh trùng lặp lịch sử clipboard: cùng một nội dung copy nhiều l
 
 ## Cần làm rõ
 
-- **Lệch so với spec gốc mục 2.1**: spec yêu cầu dedup → `copy_count + 1`, nhưng code hiện tại chỉ update `last_used_at`/`updated_at` ở nhánh dedup; `copy_count` chỉ tăng trong `markUsed()` (khi user chủ động copy lại từ history UI). Cần chốt: giữ nguyên hành vi hiện tại (copy_count đếm số lần user tái sử dụng từ app) hay sửa cho khớp spec (copy_count đếm cả số lần capture trùng)?
-- NFC xấp xỉ chỉ phủ Latin-1 + tiếng Việt; ký tự Unicode khác (vd: Hàn, Emoji ZWJ sequence) chưa compose. Chấp nhận làm technical debt hay cần full NFC (đòi hỏi thêm package ngoài whitelist)?
+- **Hành vi đã chốt**: `copy_count` CHỈ tăng khi user chủ động copy item từ history UI (`markUsed()`), KHÔNG tăng khi capture trùng (dedup). Dedup chỉ cập nhật `last_used_at`/`updated_at` + metric `clipboard_items_reused`. Lý do: copy_count đo "mục đích sử dụng lại từ app", không phải "số lần clipboard system bị trùng".
+- NFC xấp xỉ chỉ phủ Latin-1 + tiếng Việt; ký tự Unicode khác (Hàn, Emoji ZWJ sequence) chưa compose. **Đã chấp nhận làm technical debt** —_full NFC yêu cầu package ngoài whitelist, chưa cần thiết cho thị trường VN.
