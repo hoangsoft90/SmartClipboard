@@ -7,7 +7,7 @@
 ## Overview
 Setup và troubleshoot GitHub Actions workflow cho Flutter Android project. Cover tất cả common pitfalls đã gặp thực tế.
 
-## Workflow Template
+## Workflow Template (OPTIMIZED)
 
 ```yaml
 name: Build Android APK
@@ -18,6 +18,11 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+# === OPTIMIZATION: Cancel previous runs khi push mới ===
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FLUTTER_VERSION: "3.24.0"  # Pin cụ thể, KHÔNG dùng "stable"
   JAVA_VERSION: "17"
@@ -25,7 +30,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90  # AGP 8.x first build cần 60-80min
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -35,6 +40,26 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: "stable"
           cache: true
+
+      # === OPTIMIZATION: Cache Gradle dependencies ===
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('android/**/*.gradle*') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-agp870-g89-
+            gradle-${{ runner.os }}-
+
+      # === OPTIMIZATION: Cache pub dependencies ===
+      - name: Cache pub
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
 
       # === CRITICAL: Save custom files before flutter create ===
       - name: Save custom files
@@ -47,12 +72,16 @@ jobs:
           cp android/build.gradle /tmp/backup/
           cp android/settings.gradle /tmp/backup/
           cp android/gradle.properties /tmp/backup/
+          cp android/gradle/wrapper/gradle-wrapper.properties /tmp/backup/  # CRITICAL
           cp -r android/app/src/main/res /tmp/backup/res
           cp -r android/app/src/main/kotlin /tmp/backup/kotlin 2>/dev/null || true
+          cp -r android/app/src/main/AndroidManifest.xml /tmp/backup/ 2>/dev/null || true
+          echo "All custom files saved"
 
       # === flutter create generates android scaffolding ===
       - name: Generate platform scaffolding
-        run: flutter create . --platforms android --overwrite
+        run: |
+          flutter create . --platforms android --overwrite
 
       # === CRITICAL: Restore custom files ===
       - name: Restore custom files
@@ -64,23 +93,36 @@ jobs:
           cp /tmp/backup/root-build.gradle android/build.gradle
           cp /tmp/backup/settings.gradle android/settings.gradle
           cp /tmp/backup/gradle.properties android/gradle.properties
+          cp /tmp/backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
           cp -r /tmp/backup/res/* android/app/src/main/res/
           cp -r /tmp/backup/kotlin/* android/app/src/main/kotlin/ 2>/dev/null || true
+          cp /tmp/backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
+          echo "All custom files restored"
 
       # === Force correct Gradle version ===
-      - name: Fix Gradle version
+      - name: Force Gradle version for AGP compatibility
         run: |
-          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.3-all.zip|g' \
-            android/gradle/wrapper/gradle-wrapper.properties
+          WRAPPER_PROPS="android/gradle/wrapper/gradle-wrapper.properties"
+          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.9-all.zip|g' "$WRAPPER_PROPS"
+          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.9-bin.zip|g' "$WRAPPER_PROPS"
+          echo "=== Gradle wrapper ==="
+          cat "$WRAPPER_PROPS"
 
+      # === OPTIMIZATION: Use flutter build apk (handles Gradle lifecycle better) ===
       - run: flutter pub get
       - run: flutter analyze --no-pub || true
       - run: flutter test --no-pub || true
 
-      - name: Build APK
+      - name: Build debug APK
+        run: flutter build apk --debug --no-pub
+
+      - name: Build release APK
+        run: flutter build apk --release --no-pub
+
+      - name: Find built APKs
         run: |
-          cd android && chmod +x gradlew
-          ./gradlew assembleDebug assembleRelease --stacktrace
+          echo "=== APK files ==="
+          find . -name "*.apk" -type f -exec ls -lh {} \;
 
       - uses: actions/upload-artifact@v4
         with:
@@ -334,13 +376,94 @@ timeout-minutes: 90
 ```
 **Lesson**: Với AGP 8.x + heavy plugins, LUÔN set timeout ≥ 60 phút. Lần đầu build trên runner mới mất 40-80 phút. Các lần sau nhanh hơn nhờ cache.
 
-### Workflow
+#### 22. No concurrency — push mới không cancel build cũ
+**Symptom**: Nhiều build chạy song song,浪费资源, có thể conflict artifact uploads
+**Root cause**: Không có concurrency group
+**Fix**: Thêm `concurrency` block:
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+**Lesson**: LUÔN set concurrency để cancel build cũ khi push mới. Tiết kiệm runner time và tránh conflict.
+
+#### 23. No pub cache — flutter pub get chạy lại mỗi lần
+**Symptom**: `flutter pub get` download lại tất cả dependencies mỗi build
+**Root cause**: Không cache `.pub-cache`
+**Fix**: Thêm `actions/cache` cho pub cache:
+```yaml
+- name: Cache pub
+  uses: actions/cache@v4
+  with:
+    path: ~/.pub-cache
+    key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
+    restore-keys: pub-${{ runner.os }}-
+```
+**Lesson**: Cache pub dependencies tiết kiệm 1-3 phút mỗi build.
+
+#### 24. Missing gradle-wrapper.properties in backup
+**Symptom**: Gradle version revert sau flutter create dù đã save
+**Root cause**: Quên save `gradle-wrapper.properties` vào backup
+**Fix**: LUÔN save file này:
+```yaml
+cp android/gradle/wrapper/gradle-wrapper.properties /tmp/backup/
+```
+**Lesson**: File này bị flutter create ghi đè, PHẢI save/restore.
+
+#### 25. Missing AndroidManifest.xml in backup
+**Symptom**: AndroidManifest.xml mất custom permissions sau flutter create
+**Root cause**: Quên save AndroidManifest.xml
+**Fix**: Save restore:
+```yaml
+cp android/app/src/main/AndroidManifest.xml /tmp/backup/
+# ...
+cp /tmp/backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+```
+**Lesson**: AndroidManifest.xml chứa permissions, meta-data, intent filters — flutter create sẽ reset về default.
+
+#### 26. flutter build apk vs gradlew assembleDebug
+**Symptom**: Raw `gradlew` mất thêm 5-10 phút setup
+**Root cause**: Flutter CLI manages Gradle lifecycle, daemon, and dependencies more efficiently
+**Fix**: Dùng `flutter build apk --debug --no-pub` thay `cd android && ./gradlew assembleDebug`
+**Lesson**: `flutter build apk` handle pub dependency resolution + Gradle lifecycle together, faster than raw gradlew.
+
+#### 27. No artifact cleanup — disk space exhaustion
+**Symptom**: Build fails với "No space left on device"
+**Root cause**: GitHub Actions runner disk space有限 (14GB), old artifacts + Gradle cache fill up
+**Fix**: (1) Set `retention-days: 7` (not 30). (2) Clean Gradle cache before build:
+```yaml
+- name: Clean Gradle cache
+  run: |
+    rm -rf ~/.gradle/caches/journal-*
+    rm -rf ~/.gradle/caches/transforms-*
+```
+**Lesson**: Default retention 90 days quá dài. Giảm xuống 7-14 ngày.
+
+#### 28. Parallel debug + release build
+**Symptom**: Build sequence debug → release mất gấp đôi thời gian
+**Root cause**: Build tuần tự
+**Fix**: Nếu cần cả debug + release, có thể dùng matrix strategy hoặc parallel jobs:
+```yaml
+strategy:
+  matrix:
+    build-type: [debug, release]
+steps:
+  - run: flutter build apk ${{ matrix.build-type }} --no-pub
+```
+**Lesson**: Parallel build tiết kiệm 30-50% thời gian.
+
+### Workflow (OPTIMIZATION)
 
 - [ ] lib/ được save + restore?
 - [ ] `gradle-wrapper.properties` được save + restore? (flutter create ghi đè)
+- [ ] `AndroidManifest.xml` được save + restore? (flutter create reset về default)
 - [ ] "Force Gradle X.Y" step dùng đúng version cho AGP hiện tại?
 - [ ] Upload paths bao gồm `build/app/outputs/`?
 - [ ] Token dùng env var, KHÔNG hardcode?
 - [ ] `timeout-minutes` ≥ 60? (AGP 8.x first build chậm)
 - [ ] Có Gradle cache (`actions/cache` cho `~/.gradle`)?
+- [ ] Có pub cache (`actions/cache` cho `~/.pub-cache`)?
 - [ ] Dùng `flutter build apk` thay raw `gradlew`?
+- [ ] Có `concurrency` group để cancel build cũ?
+- [ ] `retention-days` ≤ 14? (tránh disk space exhaustion)
+- [ ] Build debug + release parallel (matrix strategy)?
