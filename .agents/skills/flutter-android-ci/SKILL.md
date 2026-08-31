@@ -104,10 +104,20 @@ jobs:
 **Fix**: Save/restore lib/ + pubspec.yaml trước/sau flutter create
 **Check**: Verify `lib/main.dart` content SAU restore — phải là app code, không phải counter demo
 
-#### 2. Gradle version mismatch
-**Symptom**: `Minimum supported Gradle version is 8.0. Current version is 7.6.3`
-**Root cause**: Flutter generates old Gradle wrapper
-**Fix**: `sed -i` force version sau restore
+#### 2. Gradle version mismatch + flutter create overwrite
+**Symptom**: `Minimum supported Gradle version is 8.9. Current version is 8.3`
+**Root cause**: `flutter create --overwrite` REGENERATES `gradle-wrapper.properties` về default (7.6.3). Step "Force Gradle X.Y" sau đó dùng `sed` ghi đè version — NHƯNG nếu version trong sed ≠ version cần thiết, build fail.
+**Fix**: (1) Save `gradle-wrapper.properties` vào backup trước flutter create. (2) Restore sau flutter create. (3) Update "Force Gradle" step dùng đúng version. Ví dụ AGP 8.7.0 → Gradle 8.9+:
+```yaml
+# Save
+cp android/gradle/wrapper/gradle-wrapper.properties /tmp/backup/
+# Restore
+cp /tmp/backup/gradle-wrapper.properties android/gradle/wrapper/
+# Force
+sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.9-all.zip|g' \
+  android/gradle/wrapper/gradle-wrapper.properties
+```
+**Lesson**: LUÔN save/restore `gradle-wrapper.properties` cùng các android files khác. KHÔNG tin rằng file đã commit sẽ giữ nguyên — `flutter create` regenerate TOÀN BỘ android scaffolding.
 
 #### 3. shrinkResources + minifyEnabled conflict
 **Symptom**: `Removing unused resources requires unused code shrinking`
@@ -157,7 +167,18 @@ path: |
 
 ### Kotlin/IME Pitfalls
 
-#### 14. Kotlin lambda type mismatch for Java interface
+#### 14. AGP version compatibility with transitive dependencies
+**Symptom**: `Could not get unknown property 'flutter' for extension 'android'` / `compileSdkVersion is not specified`
+**Root cause**: Newer Flutter plugins (e.g. `package_info_plus` 9.x via `google_mobile_ads`) require AGP 8.4+. Old AGP (8.1.0) can't evaluate these plugins.
+**Fix**: Upgrade AGP + Kotlin + Gradle together:
+```groovy
+// settings.gradle
+id "com.android.application" version "8.7.0" apply false
+id "org.jetbrains.kotlin.android" version "2.0.0" apply false
+// gradle-wrapper.properties
+distributionUrl=...gradle-8.9-all.zip
+```
+**Lesson**: Khi thêm new Flutter plugin (đặc biệt từ Google), LUÔN check AGP version requirement. Upgrade AGP/Kotlin/Gradle theo bộ, không upgrade từng cái.
 **Symptom**: `Type mismatch: inferred type is (...) -> Unit but InterfaceName was expected`
 **Root cause**: Java interface `OnKeyPressListener` has one method, but Kotlin SAM conversion fails with wrong lambda signature
 **Fix**: Dùng anonymous object thay vì lambda:
@@ -292,10 +313,13 @@ drawKey(canvas, commaRect, ...)
 - [ ] Java + Kotlin cùng JVM target?
 - [ ] AndroidManifest.xml KHÔNG có `android:banner` (trừ TV app)?
 - [ ] Mipmap PNG icons cho tất cả density?
-- [ ] Gradle wrapper ≥ 8.0?
+- [ ] Gradle wrapper ≥ 8.0? (AGP 8.7.0 → Gradle 8.9+)
+- [ ] AGP/Kotlin/Gradle upgrade theo bộ? (không upgrade từng cái)
 - [ ] Sau str_replace multi-line blocks: verify comment/declaration không merge nhau?
 
 ### Workflow
 - [ ] lib/ được save + restore?
+- [ ] `gradle-wrapper.properties` được save + restore? (flutter create ghi đè)
+- [ ] "Force Gradle X.Y" step dùng đúng version cho AGP hiện tại?
 - [ ] Upload paths bao gồm `build/app/outputs/`?
 - [ ] Token dùng env var, KHÔNG hardcode?
