@@ -2,31 +2,13 @@
 
 ## Overview
 
-4 thay đổi nền tảng: đổi package name, cho phép HTTP cleartext, nâng targetSdkVersion 36, tích hợp Sentry SDK.
+3 thay đổi nền tảng: cho phép HTTP cleartext, nâng targetSdkVersion 36, tích hợp Sentry SDK. Package name giữ nguyên `com.smartclip.smartclipboard`.
 
 ---
 
-## 1. Package Rename
+## 1. HTTP Cleartext Traffic
 
-**Từ**: `com.smartclip.smartclipboard`
-**Đến**: `com.hoangsoft90.smartclipboard`
-
-### Files ảnh hưởng
-- `android/app/build.gradle` — `applicationId`, `namespace`
-- `android/app/src/main/kotlin/com/smartclip/smartclipboard/` — rename thư mục
-- `AndroidManifest.xml` — `FileProvider` authority `${applicationId}.fileprovider`
-- `pubspec.yaml` — không đổi (Flutter name riêng, không phải Android package)
-
-### Scenario: Rename thành công
-- **GIVEN** package cũ `com.smartclip.smartclipboard`
-- **WHEN** rename xong
-- **THEN** `build.gradle` dùng `com.hoangsoft90.smartclipboard`; tất cả Kotlin files nằm đúng package; FileProvider authority đúng; build GH Actions pass
-
----
-
-## 2. HTTP Cleartext Traffic
-
-**Vấn đề**: Release APK block HTTP plaintext. Sentry SDK cần gửi event qua HTTPS nhưng trong tương lai có thể cần HTTP cho debug/internal APIs.
+**Vấn đề**: Release APK block HTTP plaintext. Cần cho phép HTTP cho tất cả domain (Sentry SDK, future internal APIs).
 
 ### Files ảnh hưởng
 - `android/app/src/main/AndroidManifest.xml` — thêm `android:usesCleartextTraffic="true"` vào `<application>`
@@ -39,7 +21,7 @@
 
 ---
 
-## 3. Target SDK 36
+## 2. Target SDK 36
 
 **Yêu cầu**: Google Play yêu cầu API 36 từ 31/8/2026.
 
@@ -53,14 +35,13 @@
 
 ---
 
-## 4. Sentry SDK Integration
+## 3. Sentry SDK Integration
 
 **DSN**: `https://7a668ce084082307784ece27aaa7a588@o4505474077753344.ingest.us.sentry.io/4512003088908288`
 
 ### Files ảnh hưởng
 - `pubspec.yaml` — thêm `sentry_flutter: ^8.0.0`
 - `lib/main.dart` — init `SentryFlutter.init()` wrapping `runApp()`
-- `android/app/build.gradle` — không cần thêm gì (sentry-android auto-init via Flutter plugin)
 
 ### Requirements
 
@@ -87,17 +68,13 @@ dependencies:
   sentry_flutter: ^8.0.0
 ```
 
-Không thay đổi whitelist hiện tại vì `sentry_flutter` là dependency mới cần thêm.
-
 ---
 
 ## Build Impact
-- Package rename cần clean build
 - targetSdk 36 cần Gradle/AGP tương thích (AGP 8.1.0 hỗ trợ SDK 36)
 - Sentry SDK thêm ~2MB vào APK size
 
 ---
 
 ## Cần làm rõ
-- Package rename có cần đổi app name hiển thị không? (hiện tại là "Smart Clipboard" — giữ nguyên)
 - Sentry có nên enable trong debug mode không? (mặc định: chỉ enable trong release)
