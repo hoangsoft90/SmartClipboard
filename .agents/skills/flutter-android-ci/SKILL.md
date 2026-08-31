@@ -191,6 +191,22 @@ android {
 ```
 The error message tells you exact version needed. Use the highest one if multiple plugins require different versions.
 **Lesson**: After adding new native plugins, check if they require specific NDK version. Flutter's `ndkVersion flutter.ndkVersion` may not match — set explicit version instead.
+
+#### 35. sentry_flutter languageVersion incompatibility with Kotlin 2.2+
+**Symptom**: `e: Language version 1.6 is no longer supported; please, use version 1.8 or greater.` at `:sentry_flutter:compileDebugKotlin`
+**Root cause**: sentry_flutter 8.x ships with `languageVersion = "1.6"` in its Android plugin's build.gradle. Kotlin 2.2.0 dropped support for language version 1.6 (only 1.8+ supported). This creates a conflict with plugins like `package_info_plus` 9.x which need Kotlin 2.2.0 for metadata compatibility.
+**Fix**: Upgrade sentry_flutter to ≥ 9.3.0 which bumped languageVersion to 1.8:
+```yaml
+# pubspec.yaml
+sentry_flutter: ^9.3.0  # NOT ^8.0.0 with Kotlin 2.2
+```
+**Compatibility matrix**:
+| Kotlin Version | sentry_flutter 8.x | sentry_flutter ≥ 9.3.0 |
+|---|---|---|
+| 2.0.x | ✅ | ✅ |
+| 2.1.x | ✅ | ✅ |
+| 2.2.x | ❌ (languageVersion 1.6) | ✅ (languageVersion 1.8) |
+**Lesson**: When upgrading Kotlin to 2.2+, check ALL plugins' `languageVersion`. sentry_flutter 8.x is a known blocker. Always upgrade sentry_flutter first when bumping Kotlin ≥ 2.2.
 **Symptom**: `Type mismatch: inferred type is (...) -> Unit but InterfaceName was expected`
 **Root cause**: Java interface `OnKeyPressListener` has one method, but Kotlin SAM conversion fails with wrong lambda signature
 **Fix**: Dùng anonymous object thay vì lambda:
