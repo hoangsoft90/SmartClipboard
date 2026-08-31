@@ -24,6 +24,8 @@ dependencies:
   encrypt: ^5.0.3                 # AES-256-GCM cho Backup/Restore
   crypto: ^3.0.3                  # SHA256 content_hash + HMAC cho PBKDF2
   receive_sharing_intent: ^1.4.5  # Share Sheet Integration (fallback P0)
+  sentry_flutter: ^8.0.0            # Error monitoring (platform-hardening)
+  google_mobile_ads: ^5.2.0        # AdMob monetization
 
 dev_dependencies:
   flutter_test:

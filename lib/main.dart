@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'core/database/app_database.dart';
 import 'generated/l10n/app_localizations.dart';
@@ -16,26 +18,38 @@ import 'services/cache_sync_service.dart';
 import 'state/providers.dart';
 import 'widgets/lock_gate.dart';
 
+const _sentryDsn = 'https://7a668ce084082307784ece27aaa7a588@o4505474077753344.ingest.us.sentry.io/4512003088908288';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // WAL mode + migration chạy trong transaction (STRICT RULE 3, mục 2.2).
-  final db = await AppDatabase.open();
+  // Sentry: capture Flutter + platform errors
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = _sentryDsn;
+      options.tracesSampleRate = 0.0; // Disable performance monitoring for now
+    },
+    appRunner: () async {
+      // Mobile Ads SDK init
+      await MobileAds.instance.initialize();
 
-  // STRICT RULE 13 [CACHE REGEN]: sau khi migration thành công, bắt buộc gọi
-  // regenerateSnippetCache() NGAY trước khi coi app "sẵn sàng" (mục 2.2).
-  // File cache được ghi để Native IME (Phase 1) đọc — Phase 0 KHÔNG có code
-  // Kotlin nào (process boundary: sync CHỈ qua file, STRICT RULE 6).
-  try {
-    await CacheSyncService(db).regenerateSnippetCache();
-  } catch (_) {
-    // Cache hỏng không chặn app khởi động — IME sẽ fallback empty state (mục 1.3).
-  }
+      // WAL mode + migration chạy trong transaction (STRICT RULE 3, mục 2.2).
+      final db = await AppDatabase.open();
 
-  runApp(ProviderScope(
-    overrides: [databaseProvider.overrideWithValue(db)],
-    child: const SmartClipboardApp(),
-  ));
+      // STRICT RULE 13 [CACHE REGEN]: sau khi migration thành công, bắt buộc gọi
+      // regenerateSnippetCache() NGAY trước khi coi app "sẵn sàng" (mục 2.2).
+      try {
+        await CacheSyncService(db).regenerateSnippetCache();
+      } catch (_) {
+        // Cache hỏng không chặn app khởi động — IME sẽ fallback empty state (mục 1.3).
+      }
+
+      runApp(ProviderScope(
+        overrides: [databaseProvider.overrideWithValue(db)],
+        child: const SmartClipboardApp(),
+      ));
+    },
+  );
 }
 
 /// Named routes cho deep-link support + onGenerateRoute.

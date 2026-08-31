@@ -10,6 +10,7 @@ import 'clipboard/clipboard_history_screen.dart';
 import 'playground/playground_screen.dart';
 import 'settings/settings_screen.dart';
 import 'snippets/snippets_screen.dart';
+import '../widgets/banner_ad_widget.dart';
 import '../widgets/save_snippet_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -163,6 +164,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               SettingsScreen(),
             ]),
           ),
+          const BannerAdWidget(),
         ]),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _tab,
