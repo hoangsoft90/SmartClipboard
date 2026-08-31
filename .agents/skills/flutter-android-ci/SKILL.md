@@ -61,12 +61,11 @@ jobs:
       - run: flutter analyze --no-pub || true
       - run: flutter test --no-pub || true
 
-      # FIX #31: --info flag để debug khi Gradle hang
       - name: Build debug APK
-        run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
+        run: flutter build apk --debug --no-pub
 
       - name: Build release APK
-        run: flutter build apk --release --no-pub --info 2>&1 | tail -100
+        run: flutter build apk --release --no-pub
 
       - name: Find built APKs
         run: |
@@ -440,12 +439,18 @@ env:
 #### 32. No build output → impossible to debug CI failures
 **Symptom**: Build fails or hangs nhưng CI log shows nothing useful
 **Root cause**: `flutter build apk` runs Gradle, but Gradle stdout goes to daemon log. When Gradle hangs or errors occur in daemon, stdout is empty.
-**Fix**: (1) Add `--info` flag to see Gradle progress. (2) Pipe through `tail -100` to capture last meaningful output:
+**Fix**: Flutter CLI doesn't accept `--info` (that's a Gradle flag). For Gradle-level debugging, pass it via `--` separator:
 ```yaml
+# Pass Gradle flags via -- separator
 - name: Build debug APK
-  run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
+  run: flutter build apk --debug --no-pub -- --info
 ```
-**Lesson**: LUÔN thêm `--info` khi build trên CI. Without it, Gradle hangs = zero output = impossible to debug.
+Or run Gradle directly for full output:
+```yaml
+- name: Build debug APK (with Gradle info)
+  run: cd android && ./gradlew assembleDebug --info
+```
+**Lesson**: `flutter build apk` KHÔNG accept `--info`. Dùng `-- --info` để pass flags xuống Gradle, hoặc chạy `gradlew` trực tiếp.
 
 ### Workflow (OPTIMIZATION)
 
