@@ -228,8 +228,10 @@ class _ItemTile extends ConsumerWidget {
               color: item.isPinned ? theme.colorScheme.primary : null,
             ),
             tooltip: item.isPinned ? l10n.popupUnpin : l10n.popupPin,
-            onPressed: () =>
-                ref.read(clipboardListProvider.notifier).togglePin(item),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              ref.read(clipboardListProvider.notifier).togglePin(item);
+            },
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
@@ -239,11 +241,15 @@ class _ItemTile extends ConsumerWidget {
               color: item.isFavorite ? Colors.amber : null,
             ),
             tooltip: item.isFavorite ? l10n.popupUnfavorite : l10n.popupFavorite,
-            onPressed: () =>
-                ref.read(clipboardListProvider.notifier).toggleFavorite(item),
+            onPressed: () {
+              FocusManager.instance.primaryFocus?.unfocus();
+              ref.read(clipboardListProvider.notifier).toggleFavorite(item);
+            },
           ),
           PopupMenuButton<String>(
             onSelected: (action) async {
+              // PLAN 11 P0-1: Unfocus before any action to prevent IME re-trigger
+              FocusManager.instance.primaryFocus?.unfocus();
               final controller = ref.read(clipboardListProvider.notifier);
               switch (action) {
                 case 'pin':

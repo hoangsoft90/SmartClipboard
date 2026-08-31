@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:sqflite/sqflite.dart';
 
-import '../core/constants/app_limits.dart';
 import '../core/database/app_database.dart';
 import '../core/utils/content_normalizer.dart';
 import '../models/clipboard_item.dart';
@@ -14,13 +13,9 @@ class ClipboardSaveResult {
   /// true nếu trùng hash → chỉ UPDATE last_used_at + copy_count+1 (mục 2.1).
   final bool wasDeduplicated;
 
-  /// Số item bị soft-archive do vượt Free limit (banner "Nâng cấp Pro").
-  final int archivedCount;
-
   const ClipboardSaveResult({
     required this.item,
     required this.wasDeduplicated,
-    this.archivedCount = 0,
   });
 }
 
@@ -85,41 +80,10 @@ class ClipboardRepository {
     );
     await db.insert('clipboard_items', item.toMap());
 
-    final archivedCount = await enforceFreeLimit();
     return ClipboardSaveResult(
       item: item,
       wasDeduplicated: false,
-      archivedCount: archivedCount,
     );
-  }
-
-  /// STRICT RULE 17: vượt limit → archive item cũ nhất (không pin/favorite)
-  /// cho tới khi số item active <= limit. KHÔNG xoá vật lý.
-  Future<int> enforceFreeLimit() async {
-    final countRow = await db.rawQuery(
-        'SELECT COUNT(*) AS c FROM clipboard_items WHERE is_archived = 0');
-    var activeCount = countRow.first['c'] as int? ?? 0;
-    if (activeCount <= AppLimits.freeClipboardLimit) return 0;
-
-    var archived = 0;
-    while (activeCount > AppLimits.freeClipboardLimit) {
-      final oldest = await db.query(
-        'clipboard_items',
-        where: 'is_archived = 0 AND is_pinned = 0 AND is_favorite = 0',
-        orderBy: 'created_at ASC',
-        limit: 1,
-      );
-      if (oldest.isEmpty) break;
-      await db.update(
-        'clipboard_items',
-        {'is_archived': 1, 'updated_at': DateTime.now().millisecondsSinceEpoch},
-        where: 'id = ?',
-        whereArgs: [oldest.first['id'] as String],
-      );
-      activeCount--;
-      archived++;
-    }
-    return archived;
   }
 
   /// Danh sách active hiển thị trên UI: pinned trước, rồi mới nhất.

@@ -9,7 +9,7 @@ import 'package:sqflite/sqflite.dart';
 class DbMigrations {
   DbMigrations._();
 
-  static const int targetVersion = 1;
+  static const int targetVersion = 2;
 
   /// v1 — schema gốc, sao chép nguyên văn từ Master Spec mục 2.
   static const List<String> v1Statements = [
@@ -81,7 +81,20 @@ class DbMigrations {
           await txn.execute(statement);
         }
       }
-      // Các version tương lai thêm ở đây: if (from < 2 && to >= 2) { ... }
+      // v2 — Remove Free Limits: restore all archived items
+      if (from < 2 && to >= 2) {
+        // Unarchive all clipboard items that were archived due to Free limits
+        await txn.rawUpdate(
+            'UPDATE clipboard_items SET is_archived = 0 WHERE is_archived = 1');
+        // Unarchive all snippets that were archived due to Free limits
+        await txn.rawUpdate(
+            'UPDATE snippets SET is_archived = 0 WHERE is_archived = 1');
+        // Mark migration complete
+        await txn.insert('app_meta', {
+          'key': 'limits_model_version',
+          'value': '2',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
     });
   }
 }

@@ -48,6 +48,7 @@ class SmartClipboardIME : InputMethodService() {
     private var triggerMap = mutableMapOf<String, String>()
     private var lastCacheVersion = 0L
     private var keyboardBgColorHex = "#FFFFFF" // PLAN 7 P1-5
+    private var appThemeMode = "system" // PLAN 11 P1: sync theme from Flutter app
 
     // Typing buffer — accumulates characters for trigger detection
     private val typingBuffer = StringBuilder()
@@ -165,14 +166,35 @@ class SmartClipboardIME : InputMethodService() {
         return root
     }
 
+    // PLAN 11 P0-1: Guard — only show keyboard for editable text fields
+    private fun isEditableTextField(info: EditorInfo?): Boolean {
+        if (info == null) return false
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        if (cls == InputType.TYPE_NULL) return false
+        return cls == InputType.TYPE_CLASS_TEXT
+            || cls == InputType.TYPE_CLASS_NUMBER
+            || cls == InputType.TYPE_CLASS_PHONE
+            || cls == InputType.TYPE_CLASS_DATETIME
+    }
+
     override fun onStartInput(info: EditorInfo?, restarting: Boolean) {
         super.onStartInput(info, restarting)
+        // PLAN 11 P0-1: Guard — reject non-editable fields early
+        if (!isEditableTextField(info)) {
+            requestHideSelf(0)
+            return
+        }
         // FIX BUG B: commit any leftover composing region from previous session
         // (in case onFinishInputView didn't fire — process kill, crash, etc.)
         currentInputConnection?.finishComposingText()
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
+        // PLAN 11 P0-1: Defense-in-depth guard — reject non-editable fields
+        if (!isEditableTextField(info)) {
+            requestHideSelf(0)
+            return
+        }
         super.onStartInputView(info, restarting)
         currentEditorInfo = info
         typingBuffer.clear()
@@ -464,8 +486,16 @@ class SmartClipboardIME : InputMethodService() {
     }
 
     private fun isDarkMode(): Boolean {
-        return (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                Configuration.UI_MODE_NIGHT_YES
+        // PLAN 11 P1: Check app theme mode first, fallback to system
+        return when (appThemeMode) {
+            "dark" -> true
+            "light" -> false
+            else -> {
+                // 'system' — follow Android system setting
+                (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                        Configuration.UI_MODE_NIGHT_YES
+            }
+        }
     }
 
     private fun isPasswordField(): Boolean {
@@ -513,6 +543,9 @@ class SmartClipboardIME : InputMethodService() {
             } catch (_: Exception) {
                 keyboardView.setKeyboardBackgroundColor(android.graphics.Color.WHITE)
             }
+
+            // PLAN 11 P1: Read app theme mode for IME palette
+            appThemeMode = obj.optString("app_theme_mode", "system")
 
             val triggers = obj.optJSONObject("triggers") ?: JSONObject()
             triggerMap.clear()

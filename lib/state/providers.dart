@@ -16,7 +16,9 @@ import '../services/cache_sync_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/expansion_engine.dart';
 import '../services/metrics_service.dart';
+import '../services/entitlement_service.dart';
 import '../services/privacy_service.dart';
+import '../services/rewarded_ad_service.dart';
 
 /// ============================================================================
 /// STATE MANAGEMENT — RIVERPOD THỐNG NHẤT TOÀN APP (STRICT RULE 18).
@@ -219,16 +221,7 @@ final clipboardListProvider = StateNotifierProvider<ClipboardListController,
     (ref) => ClipboardListController(
         ref.watch(clipboardRepoProvider), ref));
 
-final archivedClipboardCountProvider = FutureProvider<int>(
-    (ref) async {
-  ref.watch(clipboardListProvider); // refresh khi list đổi
-  return ref.read(clipboardRepoProvider).archivedCount();
-});
 
-final snippetArchivedCountProvider = FutureProvider<int>((ref) async {
-  ref.watch(snippetListProvider); // refresh khi list đổi
-  return ref.read(snippetRepoProvider).archivedCount();
-});
 
 // --------------------------- Snippets & Folders ---------------------------
 
@@ -307,11 +300,9 @@ class FolderListController
     }
   }
 
-  Future<bool> create(String name) async {
-    if (!await _repo.canCreateFolder()) return false;
+  Future<void> create(String name) async {
     await _repo.createFolder(name);
     await reload();
-    return true;
   }
 
   Future<void> rename(String id, String name) async {
@@ -367,8 +358,17 @@ final keyboardActivationStateProvider =
       : KeyboardActivationState.enabledNotActive;
 });
 
-/// Pro status stub — wire-up `in_app_purchase` ở phase IAP (không thuộc P0).
-/// false = bản Free, áp dụng AppLimits (soft-delete Rule 17).
+/// Pro status — EntitlementService (rolling 24h from Rewarded Ad).
+final entitlementServiceProvider = Provider(
+    (ref) => EntitlementService(ref.watch(databaseProvider)));
+
+final isProActiveProvider = FutureProvider<bool>(
+    (ref) => ref.watch(entitlementServiceProvider).isProActive);
+
+/// Rewarded Ad service — singleton.
+final rewardedAdServiceProvider = Provider((ref) => RewardedAdService());
+
+/// Legacy stub — kept for backward compatibility, will be removed.
 final proStatusProvider = StateProvider<bool>((_) => false);
 
 /// Locale provider — persists language choice in app_meta.
@@ -403,6 +403,46 @@ class LocaleController extends StateNotifier<Locale?> {
 
 /// Helper dùng chung: hash nội dung (để kiểm tra dedup ngoài repository nếu cần).
 String hashOf(String raw) => contentHash(raw);
+
+// --------------------------- Theme System (Plan 11 P1) ---------------------------
+
+/// App theme mode: system, light, dark.
+/// Persisted in app_meta, key: 'app_theme_mode'.
+final themeModeProvider =
+    StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
+  return ThemeModeController(ref.watch(metaDaoProvider));
+});
+
+class ThemeModeController extends StateNotifier<ThemeMode> {
+  final MetaDao _meta;
+  ThemeModeController(this._meta) : super(ThemeMode.system) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final code = await _meta.get('app_theme_mode');
+    switch (code) {
+      case 'light':
+        state = ThemeMode.light;
+      case 'dark':
+        state = ThemeMode.dark;
+      default:
+        state = ThemeMode.system;
+    }
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = mode;
+    final code = switch (mode) {
+      ThemeMode.system => 'system',
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+    };
+    await _meta.set('app_theme_mode', code);
+    // Trigger cache regen so IME picks up new theme on next load
+    // Note: cacheSyncProvider reads from DB, so we just need to notify it
+  }
+}
 
 // --------------------------- Clipboard Filter (Batch 2) ---------------------------
 

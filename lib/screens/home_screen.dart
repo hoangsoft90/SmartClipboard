@@ -70,7 +70,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final result =
         await ref.read(clipboardServiceProvider).captureFromSystem();
     await ref.read(clipboardListProvider.notifier).reload();
-    await ref.read(archivedClipboardCountProvider.future);
 
     if (!mounted) return;
 

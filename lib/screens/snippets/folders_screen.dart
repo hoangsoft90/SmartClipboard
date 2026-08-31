@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/app_limits.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../../state/providers.dart';
 
@@ -49,29 +48,7 @@ class FoldersScreen extends ConsumerWidget {
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final repo = ref.read(snippetRepoProvider);
-          if (!await repo.canCreateFolder()) {
-            if (!context.mounted) return;
-            showDialog<void>(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(l10n.foldersFreeLimit),
-                content: Text(
-                    'Bản Free tối đa ${AppLimits.freeFolderLimit} folders. '
-                    'Dữ liệu hiện tại KHÔNG bị xoá — nâng cấp Pro để tạo '
-                    'không giới hạn.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text(l10n.btnLater)),
-                ],
-              ),
-            );
-            return;
-          }
-          _createDialog(context, ref);
-        },
+        onPressed: () => _createDialog(context, ref),
         icon: const Icon(Icons.create_new_folder_outlined),
         label: Text(l10n.foldersNew),
       ),

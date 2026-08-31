@@ -81,6 +81,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               style: const TextStyle(fontSize: 12)),
         ),
 
+        // ---------------- Pro (Rewarded Ad) ----------------
+        _SectionHeader('Pro'),
+        _ProStatusSection(),
+
         // ---------------- Backup / Restore ----------------
         _SectionHeader(l10n.settingsBackupSection),
         ListTile(
@@ -122,6 +126,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             },
           ),
         ),
+
+        // ---------------- Appearance > Theme ----------------
+        _SectionHeader('Appearance'),
+        _ThemeModePicker(),
 
         // ---------------- PLAN 7 P1-5: Keyboard background color ----------------
         _SectionHeader(l10n.settingsKeyboardBgColor),
@@ -551,6 +559,143 @@ class _RestoreBackupDialogState extends State<_RestoreBackupDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2))
               : Text(l10n.btnRestore),
+        ),
+      ],
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// Pro Status Section — Rewarded Ad unlock (rolling 24h)
+// ------------------------------------------------------------------
+class _ProStatusSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isProAsync = ref.watch(isProActiveProvider);
+
+    return isProAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (isPro) {
+        if (isPro) {
+          return _ProActiveSection();
+        }
+        return _ProLockedSection();
+      },
+    );
+  }
+}
+
+class _ProActiveSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final entitlement = ref.watch(entitlementServiceProvider);
+
+    return FutureBuilder<DateTime?>(
+      future: entitlement.expiresAt,
+      builder: (ctx, snap) {
+        final expires = snap.data;
+        final localTime = expires?.toLocal();
+        final timeStr = localTime != null
+            ? '${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}'
+            : '??:??';
+
+        return ListTile(
+          leading: const Icon(Icons.workspace_premium),
+          title: Text('✨ Pro Active',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold)),
+          subtitle: Text('Available until $timeStr'),
+        );
+      },
+    );
+  }
+}
+
+class _ProLockedSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListTile(
+      leading: const Icon(Icons.workspace_premium_outlined),
+      title: const Text('✨ Unlock Pro for today'),
+      subtitle: const Text('Watch a short ad to unlock all Pro features for 24 hours'),
+      trailing: FilledButton.tonal(
+        onPressed: () => _watchAd(context, ref),
+        child: const Text('Watch Ad'),
+      ),
+    );
+  }
+
+  void _watchAd(BuildContext context, WidgetRef ref) {
+    final adService = ref.read(rewardedAdServiceProvider);
+    final entitlement = ref.read(entitlementServiceProvider);
+
+    adService.showAd(
+      onEarned: () async {
+        await entitlement.unlockFromRewardedAd();
+        ref.invalidate(isProActiveProvider);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✨ Pro unlocked for 24 hours!')),
+          );
+        }
+      },
+      onFailed: () {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Ad failed to load. Please try again.')),
+          );
+        }
+      },
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// Theme Mode Picker — System / Light / Dark
+// ------------------------------------------------------------------
+class _ThemeModePicker extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentMode = ref.watch(themeModeProvider);
+
+    return Column(
+      children: [
+        RadioListTile<ThemeMode>(
+          secondary: const Icon(Icons.brightness_auto),
+          title: const Text('System'),
+          subtitle: const Text('Follow device setting'),
+          value: ThemeMode.system,
+          groupValue: currentMode,
+          onChanged: (mode) {
+            if (mode != null) {
+              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            }
+          },
+        ),
+        RadioListTile<ThemeMode>(
+          secondary: const Icon(Icons.light_mode),
+          title: const Text('Light'),
+          value: ThemeMode.light,
+          groupValue: currentMode,
+          onChanged: (mode) {
+            if (mode != null) {
+              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            }
+          },
+        ),
+        RadioListTile<ThemeMode>(
+          secondary: const Icon(Icons.dark_mode),
+          title: const Text('Dark'),
+          value: ThemeMode.dark,
+          groupValue: currentMode,
+          onChanged: (mode) {
+            if (mode != null) {
+              ref.read(themeModeProvider.notifier).setThemeMode(mode);
+            }
+          },
         ),
       ],
     );

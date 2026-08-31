@@ -97,11 +97,19 @@ class CacheSyncService {
         ? (bgRows.first['value'] as String?) ?? '#FFFFFF'
         : '#FFFFFF';
 
+    // PLAN 11 P1: Read theme mode from app_meta for IME sync
+    final themeRows = await db.query('app_meta',
+        where: 'key = ?', whereArgs: ['app_theme_mode'], limit: 1);
+    final themeMode = themeRows.isNotEmpty
+        ? (themeRows.first['value'] as String?) ?? 'system'
+        : 'system';
+
     final file = await _cacheFile();
     final payload = jsonEncode({
       'cache_version': version,
       'triggers': triggers,
       'keyboard_bg_color': bgColorHex, // PLAN 7 P1-5
+      'app_theme_mode': themeMode, // PLAN 11 P1: theme sync to IME
     });
     // Ghi atomically-ish: ghi file tạm rồi rename để IME (Phase 1) ít khi đọc
     // phải file dở dang.

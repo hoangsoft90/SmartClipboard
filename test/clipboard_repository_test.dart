@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'package:smart_clipboard/core/constants/app_limits.dart';
 import 'package:smart_clipboard/core/database/migrations.dart';
 import 'package:smart_clipboard/repositories/clipboard_repository.dart';
 import 'package:smart_clipboard/services/privacy_service.dart';
@@ -34,7 +33,6 @@ void main() {
 
       expect(result.wasDeduplicated, false);
       expect(result.item.content, 'Hello World');
-      expect(result.archivedCount, 0);
 
       // Kiểm tra trong DB
       final rows = await db.query('clipboard_items');
@@ -73,7 +71,7 @@ void main() {
     });
   });
 
-  group('ClipboardRepository — Free Limit', () {
+  group('ClipboardRepository — No Free Limits', () {
     late Database db;
     late ClipboardRepository repo;
 
@@ -95,63 +93,23 @@ void main() {
       await db.close();
     });
 
-    test('Vượt quá free limit → archive item cũ nhất', () async {
-      // Tạo nhiều items hơn limit
-      for (var i = 0; i < AppLimits.freeClipboardLimit + 5; i++) {
+    test('Không có giới hạn — lưu nhiều items đều hoạt động', () async {
+      // Tạo 60 items — không có archive nào vì free limits đã bị xóa
+      for (var i = 0; i < 60; i++) {
         await repo.save('Item $i', expirationDays: 30);
       }
 
-      // Kiểm tra số active items = limit
       final active = await repo.getActive();
-      expect(active.length, AppLimits.freeClipboardLimit);
-
-      // Kiểm tra có items bị archive
-      final archivedCount = await repo.archivedCount();
-      expect(archivedCount, 5);
+      expect(active.length, 60);
     });
 
-    test('Pinned items không bị archive', () async {
-      // Tạo items
-      for (var i = 0; i < AppLimits.freeClipboardLimit + 3; i++) {
-        final result = await repo.save('Item $i', expirationDays: 30);
-        // Pin item đầu tiên
-        if (i == 0) {
-          await repo.setPinned(result.item.id, true);
-        }
-      }
-
-      // Item pinned không bị archive
-      final pinned = await db.query('clipboard_items',
-          where: 'is_pinned = 1 AND is_archived = 0');
-      expect(pinned.length, 1);
-      expect(pinned.first['content'], 'Item 0');
-    });
-
-    test('Favorite items không bị archive', () async {
-      // Tạo items
-      for (var i = 0; i < AppLimits.freeClipboardLimit + 3; i++) {
-        final result = await repo.save('Item $i', expirationDays: 30);
-        // Favorite item đầu tiên
-        if (i == 0) {
-          await repo.setFavorite(result.item.id, true);
-        }
-      }
-
-      // Item favorite không bị archive
-      final favorites = await db.query('clipboard_items',
-          where: 'is_favorite = 1 AND is_archived = 0');
-      expect(favorites.length, 1);
-      expect(favorites.first['content'], 'Item 0');
-    });
-
-    test('archivedCount trả đúng số items bị archive', () async {
-      // Tạo items
+    test('archivedCount trả 0 khi không có item nào bị archive', () async {
       for (var i = 0; i < 10; i++) {
         await repo.save('Item $i', expirationDays: 30);
       }
 
       final count = await repo.archivedCount();
-      expect(count, greaterThanOrEqualTo(0));
+      expect(count, 0);
     });
   });
 }

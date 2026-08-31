@@ -48,6 +48,7 @@ Future<void> main() async {
         // Cache hỏng không chặn app khởi động — IME sẽ fallback empty state (mục 1.3).
       }
 
+      // Run app with ProviderScope — database override for DI
       runApp(ProviderScope(
         overrides: [databaseProvider.overrideWithValue(db)],
         child: const SmartClipboardApp(),
@@ -76,13 +77,22 @@ class SmartClipboardApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeModeProvider);
+
     return MaterialApp(
       title: 'Smart Clipboard',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorSchemeSeed: const Color(0xFF3D5AFE),
+        brightness: Brightness.light,
         useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorSchemeSeed: const Color(0xFF3D5AFE),
+        brightness: Brightness.dark,
+        useMaterial3: true,
+      ),
+      themeMode: themeMode,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,

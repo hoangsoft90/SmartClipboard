@@ -190,6 +190,8 @@ class _SnippetTile extends ConsumerWidget {
           ),
         PopupMenuButton<String>(
           onSelected: (action) async {
+            // PLAN 11 P0-1: Unfocus before any action to prevent IME re-trigger
+            FocusManager.instance.primaryFocus?.unfocus();
             final ctrl = ref.read(snippetListProvider.notifier);
             switch (action) {
               case 'toggle':

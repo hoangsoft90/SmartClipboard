@@ -66,9 +66,8 @@ class SnippetRepository {
       'created_at': now,
       'updated_at': now,
     });
-    final archived = await _enforceSnippetFreeLimit();
     await cacheSync.regenerateSnippetCache(); // Rule 13
-    return archived;
+    return 0;
   }
 
   Future<void> update(Snippet snippet) async {
@@ -118,26 +117,7 @@ class SnippetRepository {
     return rows.first['c'] as int? ?? 0;
   }
 
-  Future<int> _enforceSnippetFreeLimit() async {
-    final countRows = await db.rawQuery(
-        'SELECT COUNT(*) AS c FROM snippets WHERE is_archived = 0');
-    var active = countRows.first['c'] as int? ?? 0;
-    var archived = 0;
-    while (active > AppLimits.freeActiveSnippets) {
-      final victim = await db.query(
-        'snippets',
-        where: 'is_archived = 0',
-        orderBy: 'usage_count ASC, updated_at ASC',
-        limit: 1,
-      );
-      if (victim.isEmpty) break;
-      await db.update('snippets', {'is_archived': 1},
-          where: 'id = ?', whereArgs: [victim.first['id'] as String]);
-      active--;
-      archived++;
-    }
-    return archived;
-  }
+
 
   String _cleanTrigger(String raw) => raw.trim().replaceAll(RegExp(r'\s'), '');
 
@@ -148,11 +128,7 @@ class SnippetRepository {
     return rows.map(Folder.fromMap).toList();
   }
 
-  Future<bool> canCreateFolder() async {
-    final rows = await db
-        .rawQuery('SELECT COUNT(*) AS c FROM folders');
-    return (rows.first['c'] as int? ?? 0) < AppLimits.freeFolderLimit;
-  }
+
 
   Future<void> createFolder(String name, {String? icon}) async {
     await db.insert('folders', {
