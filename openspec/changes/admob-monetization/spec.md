@@ -19,15 +19,15 @@ Tạo `lib/core/constants/app_config.dart`:
 ```dart
 class AppConfig {
   AppConfig._();
-  static const bool testAds = true;  // flip to false khi release production
-  // Test AdMob App IDs (Google cung cấp để test)
-  static const String androidAppId = 'ca-app-pub-3940256099942544~3347511713';
-  static const String iosAppId = 'ca-app-pub-3940256099942544~1458002511';
-  // Test Banner Ad Unit IDs
-  static const String testBannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-  // Production Ad Unit IDs (điền sau khi tạo trên AdMob console)
-  static const String prodBannerAdUnitId = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
-  static String get bannerAdUnitId => testAds ? testBannerAdUnitId : prodBannerAdUnitId;
+  static const bool enableAds = false;  // flip to true khi release production
+  // Real AdMob App IDs (hoangsoft90)
+  static const String androidAppId = 'ca-app-pub-6917313063209470~4788568410';
+  // Real Banner Ad Unit ID
+  static const String bannerAdUnitId = 'ca-app-pub-6917313063209470/6763995063';
+  // Real Interstitial Ad Unit ID
+  static const String interstitialAdUnitId = 'ca-app-pub-6917313063209470/7046960890';
+  // Real Rewarded Ad Unit ID
+  static const String rewardedAdUnitId = 'ca-app-pub-6917313063209470/6528086144';
 }
 ```
 
@@ -37,7 +37,7 @@ class AppConfig {
 ```xml
 <meta-data
     android:name="com.google.android.gms.ads.APPLICATION_ID"
-    android:value="ca-app-pub-3940256099942544~3347511711"/>
+    android:value="ca-app-pub-6917313063209470~4788568410"/>
 ```
 
 **iOS** (`ios/Runner/Info.plist`):

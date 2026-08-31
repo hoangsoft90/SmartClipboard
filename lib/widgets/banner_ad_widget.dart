@@ -24,6 +24,7 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
   }
 
   void _loadAd() {
+    if (!AppConfig.enableAds) return;
     _ad = BannerAd(
       adUnitId: AppConfig.bannerAdUnitId,
       size: AdSize.banner,

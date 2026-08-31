@@ -1,19 +1,18 @@
 # AdMob Monetization — Tasks
 
 ## Task 1: Config & SDK Setup
-- [ ] Tạo `lib/core/constants/app_config.dart` với `testAds = true` + ad unit IDs
-- [ ] Thêm `google_mobile_ads: ^5.2.0` vào `pubspec.yaml`
-- [ ] Thêm AdMob `APPLICATION_ID` meta-data vào `AndroidManifest.xml`
-- [ ] Thêm `GADApplicationIdentifier` vào `ios/Runner/Info.plist`
-- [ ] Init `MobileAds.instance.initialize()` trong `lib/main.dart`
+- [x] Thêm `google_mobile_ads: ^5.2.0` vào `pubspec.yaml`
+- [x] Thêm AdMob `APPLICATION_ID` meta-data vào `AndroidManifest.xml`
+- [ ] Cập nhật `app_config.dart`: `enableAds=false` + real ad IDs
+- [ ] Init `MobileAds.instance.initialize()` conditional trong `lib/main.dart`
 
 ## Task 2: Banner Ad Widget
-- [ ] Tạo `lib/widgets/banner_ad_widget.dart` — reusable widget
+- [x] Tạo `lib/widgets/banner_ad_widget.dart` — reusable widget
+- [ ] Cập nhật: check `enableAds` trước khi load ad
 - [ ] Handle `onLoaded` / `onFailedToLoad` / `onDismissed`
-- [ ] Test: widget hiển thị test ad, load fail → SizedBox.shrink()
 
 ## Task 3: Ad Placement — Screens
-- [ ] `HomeScreen` — thêm `BannerAdWidget()` vào Column (giữa IndexedStack và NavigationBar)
+- [x] `HomeScreen` — thêm `BannerAdWidget()` vào Column (giữa IndexedStack và NavigationBar)
 - [ ] `ClipboardHistoryScreen` — wrap body trong Column + BannerAdWidget
 - [ ] `SnippetsScreen` — wrap body trong Column + BannerAdWidget
 - [ ] `SettingsScreen` — thêm BannerAdWidget ở cuối ListView

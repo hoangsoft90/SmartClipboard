@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'core/constants/app_config.dart';
+
 import 'core/database/app_database.dart';
 import 'generated/l10n/app_localizations.dart';
 import 'screens/home_screen.dart';
@@ -30,8 +32,10 @@ Future<void> main() async {
       options.tracesSampleRate = 0.0; // Disable performance monitoring for now
     },
     appRunner: () async {
-      // Mobile Ads SDK init
-      await MobileAds.instance.initialize();
+      // Mobile Ads SDK init — only when enableAds = true
+      if (AppConfig.enableAds) {
+        await MobileAds.instance.initialize();
+      }
 
       // WAL mode + migration chạy trong transaction (STRICT RULE 3, mục 2.2).
       final db = await AppDatabase.open();
