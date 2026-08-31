@@ -60,6 +60,7 @@ jobs:
           cp android/build.gradle /tmp/custom-backup/root-build.gradle
           cp android/settings.gradle /tmp/custom-backup/settings.gradle
           cp android/gradle.properties /tmp/custom-backup/gradle.properties
+          cp android/gradle/wrapper/gradle-wrapper.properties /tmp/custom-backup/gradle-wrapper.properties
           echo "All custom files saved"
 
       - name: Generate Flutter platform scaffolding
@@ -95,14 +96,14 @@ jobs:
           cp /tmp/custom-backup/root-build.gradle android/build.gradle
           cp /tmp/custom-backup/settings.gradle android/settings.gradle
           cp /tmp/custom-backup/gradle.properties android/gradle.properties
+          cp /tmp/custom-backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
           echo "All custom files restored"
 
-      - name: Force Gradle 8.3+ (flutter create generates 7.6.3)
+      - name: Force Gradle 8.9 (AGP 8.7.0 requires Gradle 8.9+)
         run: |
           WRAPPER_PROPS="android/gradle/wrapper/gradle-wrapper.properties"
-          # Replace any Gradle version with 8.3
-          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.3-all.zip|g' "$WRAPPER_PROPS"
-          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.3-bin.zip|g' "$WRAPPER_PROPS"
+          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.9-all.zip|g' "$WRAPPER_PROPS"
+          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.9-bin.zip|g' "$WRAPPER_PROPS"
           echo "=== Gradle wrapper after fix ==="
           cat "$WRAPPER_PROPS"
 
