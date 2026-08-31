@@ -72,12 +72,11 @@ jobs:
       - name: Run Flutter tests
         run: flutter test --no-pub || true
 
-      # FIX 3: Add --info for Gradle output debugging
       - name: Build debug APK
-        run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
+        run: flutter build apk --debug --no-pub
 
       - name: Build release APK
-        run: flutter build apk --release --no-pub --info 2>&1 | tail -100
+        run: flutter build apk --release --no-pub
 
       - name: Find built APKs
         run: |
