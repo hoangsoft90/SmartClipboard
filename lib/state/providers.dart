@@ -410,12 +410,16 @@ String hashOf(String raw) => contentHash(raw);
 /// Persisted in app_meta, key: 'app_theme_mode'.
 final themeModeProvider =
     StateNotifierProvider<ThemeModeController, ThemeMode>((ref) {
-  return ThemeModeController(ref.watch(metaDaoProvider));
+  return ThemeModeController(
+    ref.watch(metaDaoProvider),
+    ref.watch(cacheSyncProvider),
+  );
 });
 
 class ThemeModeController extends StateNotifier<ThemeMode> {
   final MetaDao _meta;
-  ThemeModeController(this._meta) : super(ThemeMode.system) {
+  final CacheSyncService _cacheSync;
+  ThemeModeController(this._meta, this._cacheSync) : super(ThemeMode.system) {
     _load();
   }
 
@@ -439,8 +443,12 @@ class ThemeModeController extends StateNotifier<ThemeMode> {
       ThemeMode.dark => 'dark',
     };
     await _meta.set('app_theme_mode', code);
-    // Trigger cache regen so IME picks up new theme on next load
-    // Note: cacheSyncProvider reads from DB, so we just need to notify it
+    // PLAN 11 P1: Regenerate cache so IME reads new theme on next loadCache()
+    try {
+      await _cacheSync.regenerateSnippetCache();
+    } catch (_) {
+      // Cache regen failure should not block theme change
+    }
   }
 }
 
