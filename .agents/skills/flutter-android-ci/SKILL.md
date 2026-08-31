@@ -18,106 +18,55 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-# === OPTIMIZATION: Cancel previous runs khi push mới ===
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: "3.24.0"  # Pin cụ thể, KHÔNG dùng "stable"
+  FLUTTER_VERSION: "3.29.0"  # Pin cụ thể, KHÔNG dùng "stable"
   JAVA_VERSION: "17"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90  # AGP 8.x first build cần 60-80min
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with: { distribution: "temurin", java-version: "17" }
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: "stable"
-          cache: true
 
-      # === OPTIMIZATION: Cache Gradle dependencies ===
+      # FIX #29: Cache key based on pubspec.lock (STABLE — không thay đổi khi flutter create chạy)
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('android/**/*.gradle*') }}
+          key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('pubspec.lock') }}
           restore-keys: |
             gradle-${{ runner.os }}-agp870-g89-
             gradle-${{ runner.os }}-
 
-      # === OPTIMIZATION: Cache pub dependencies ===
-      - name: Cache pub
-        uses: actions/cache@v4
+      - uses: subosito/flutter-action@v2
         with:
-          path: ~/.pub-cache
-          key: pub-${{ runner.os }}-${{ hashFiles('pubspec.lock') }}
-          restore-keys: pub-${{ runner.os }}-
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: "stable"
+          cache: true
 
-      # === CRITICAL: Save custom files before flutter create ===
-      - name: Save custom files
-        run: |
-          mkdir -p /tmp/backup
-          cp pubspec.yaml /tmp/backup/
-          cp pubspec.lock /tmp/backup/ 2>/dev/null || true
-          cp -r lib /tmp/backup/lib     # QUAN TRỌNG nhất
-          cp android/app/build.gradle /tmp/backup/
-          cp android/build.gradle /tmp/backup/
-          cp android/settings.gradle /tmp/backup/
-          cp android/gradle.properties /tmp/backup/
-          cp android/gradle/wrapper/gradle-wrapper.properties /tmp/backup/  # CRITICAL
-          cp -r android/app/src/main/res /tmp/backup/res
-          cp -r android/app/src/main/kotlin /tmp/backup/kotlin 2>/dev/null || true
-          cp -r android/app/src/main/AndroidManifest.xml /tmp/backup/ 2>/dev/null || true
-          echo "All custom files saved"
+      # FIX #30: KHÔNG dùng flutter create nếu android/ đã commit trong git
+      # flutter create regenerate gradle files → cache key thay đổi → cache miss
+      # → build từ đầu mỗi lần → timeout 80 phút
 
-      # === flutter create generates android scaffolding ===
-      - name: Generate platform scaffolding
-        run: |
-          flutter create . --platforms android --overwrite
-
-      # === CRITICAL: Restore custom files ===
-      - name: Restore custom files
-        run: |
-          cp /tmp/backup/pubspec.yaml .
-          cp /tmp/backup/pubspec.lock . 2>/dev/null || true
-          rm -rf lib && cp -r /tmp/backup/lib .  # PHẢI rm -rf trước
-          cp /tmp/backup/build.gradle android/app/build.gradle
-          cp /tmp/backup/root-build.gradle android/build.gradle
-          cp /tmp/backup/settings.gradle android/settings.gradle
-          cp /tmp/backup/gradle.properties android/gradle.properties
-          cp /tmp/backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
-          cp -r /tmp/backup/res/* android/app/src/main/res/
-          cp -r /tmp/backup/kotlin/* android/app/src/main/kotlin/ 2>/dev/null || true
-          cp /tmp/backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml 2>/dev/null || true
-          echo "All custom files restored"
-
-      # === Force correct Gradle version ===
-      - name: Force Gradle version for AGP compatibility
-        run: |
-          WRAPPER_PROPS="android/gradle/wrapper/gradle-wrapper.properties"
-          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.9-all.zip|g' "$WRAPPER_PROPS"
-          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.9-bin.zip|g' "$WRAPPER_PROPS"
-          echo "=== Gradle wrapper ==="
-          cat "$WRAPPER_PROPS"
-
-      # === OPTIMIZATION: Use flutter build apk (handles Gradle lifecycle better) ===
       - run: flutter pub get
       - run: flutter analyze --no-pub || true
       - run: flutter test --no-pub || true
 
+      # FIX #31: --info flag để debug khi Gradle hang
       - name: Build debug APK
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
 
       - name: Build release APK
-        run: flutter build apk --release --no-pub
+        run: flutter build apk --release --no-pub --info 2>&1 | tail -100
 
       - name: Find built APKs
         run: |
@@ -452,11 +401,60 @@ steps:
 ```
 **Lesson**: Parallel build tiết kiệm 30-50% thời gian.
 
+#### 29. Gradle cache key based on gradle files → never hits (flutter create invalidates)
+**Symptom**: "Cache not found for input keys: gradle-Linux-..." mỗi build
+**Root cause**: Cache key dùng `hashFiles('android/**/*.gradle*')` — nhưng `flutter create .` regenerate các file này → hash thay đổi → cache miss → download + compile từ đầu mỗi lần
+**Fix**: Dùng `pubspec.lock` làm cache key (stable — không thay đổi): ```yaml
+key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('pubspec.lock') }}
+```
+**Lesson**: KHÔNG dùng gradle file hash làm cache key nếu workflow chạy `flutter create`. pubspec.lock stable hơn nhiều.
+
+#### 30. flutter create trong CI gây cache invalidation + silent hang
+**Symptom**: Build "works" nhưng không có output → timeout 80 phút
+**Root cause**: (1) `flutter create .` regenerate gradle files → cache miss. (2) Flutter 3.24.0 + AGP 8.7.0 incompatible → Gradle daemon hang silently, zero stdout output. (3) 88 phút im lặng trước khi bị cancel.
+**Fix**: (1) Xóa `flutter create .` nếu android/ đã commit. (2) Upgrade Flutter version compatible với AGP: AGP 8.7.0 → Flutter ≥ 3.29.0. (3) Thêm `--info` flag để thấy debug output:
+```yaml
+- run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
+```
+**Lesson**: Nếu android/ files đã commit, KHÔNG cần `flutter create` trong CI. Mọi step save/restore/backup đều thừa — xóa hết.
+
+#### 31. Flutter version incompatible with AGP → Gradle hangs silently
+**Symptom**: Build command starts but ZERO output for 80+ minutes, then timeout. 3 orphan Java processes (Gradle daemon) killed at cancellation.
+**Root cause**: Flutter SDK ships with a specific AGP version. Using a different AGP version causes the Flutter Gradle plugin to encounter features it doesn't recognize → silent hang. Example: Flutter 3.24.0 ships with AGP 8.1.0, but project uses AGP 8.7.0.
+**Fix**: Check compatibility matrix:
+| AGP Version | Minimum Flutter Version |
+|-------------|----------------------|
+| 8.1.0       | 3.19.0               |
+| 8.3.0       | 3.22.0               |
+| 8.5.0       | 3.24.0               |
+| 8.7.0       | 3.29.0               |
+| 8.9.0       | 3.32.0               |
+
+```yaml
+# If AGP = 8.7.0, Flutter MUST be ≥ 3.29.0
+env:
+  FLUTTER_VERSION: "3.29.0"  # NOT 3.24.0!
+```
+**Lesson**: LUÔN check AGP ↔ Flutter version compatibility. Nếu dùng AGP mới, PHẢI upgrade Flutter theo. Nếu upgrade Flutter không được (project constraint), downgrade AGP về version compatible.
+
+#### 32. No build output → impossible to debug CI failures
+**Symptom**: Build fails or hangs nhưng CI log shows nothing useful
+**Root cause**: `flutter build apk` runs Gradle, but Gradle stdout goes to daemon log. When Gradle hangs or errors occur in daemon, stdout is empty.
+**Fix**: (1) Add `--info` flag to see Gradle progress. (2) Pipe through `tail -100` to capture last meaningful output:
+```yaml
+- name: Build debug APK
+  run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
+```
+**Lesson**: LUÔN thêm `--info` khi build trên CI. Without it, Gradle hangs = zero output = impossible to debug.
+
 ### Workflow (OPTIMIZATION)
 
-- [ ] lib/ được save + restore?
-- [ ] `gradle-wrapper.properties` được save + restore? (flutter create ghi đè)
-- [ ] `AndroidManifest.xml` được save + restore? (flutter create reset về default)
+- [ ] lib/ được save + restore? (NẾU dùng flutter create)
+- [ ] `gradle-wrapper.properties` được save + restore? (NẾU dùng flutter create)
+- [ ] `AndroidManifest.xml` được save + restore? (NẾU dùng flutter create)
+- [ ] Android/ files đã commit trong git? → KHÔNG cần flutter create
+- [ ] Cache key dùng `pubspec.lock` (stable) không phải `gradle*` files?
+- [ ] Flutter version compatible với AGP? (check matrix lesson #31)
 - [ ] "Force Gradle X.Y" step dùng đúng version cho AGP hiện tại?
 - [ ] Upload paths bao gồm `build/app/outputs/`?
 - [ ] Token dùng env var, KHÔNG hardcode?
@@ -467,3 +465,5 @@ steps:
 - [ ] Có `concurrency` group để cancel build cũ?
 - [ ] `retention-days` ≤ 14? (tránh disk space exhaustion)
 - [ ] Build debug + release parallel (matrix strategy)?
+- [ ] Có `--info` flag trên build command? (debug khi hang)
+- [ ] Có `2>&1 | tail -100` để capture output?
