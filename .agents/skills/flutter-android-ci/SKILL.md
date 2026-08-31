@@ -315,11 +315,32 @@ drawKey(canvas, commaRect, ...)
 - [ ] Mipmap PNG icons cho tất cả density?
 - [ ] Gradle wrapper ≥ 8.0? (AGP 8.7.0 → Gradle 8.9+)
 - [ ] AGP/Kotlin/Gradle upgrade theo bộ? (không upgrade từng cái)
-- [ ] Sau str_replace multi-line blocks: verify comment/declaration không merge nhau?
+- [ ] Sau str_replace multi-line blocks: verify comment/declaration không merge nhau?#### 21. CI timeout — Gradle首次构建 quá chậm với AGP 8.7+ + new dependencies
+**Symptom**: Build cancelled after 45min — "The operation was canceled"
+**Root cause**: `timeout-minutes: 45` quá ngắn cho first-time build với AGP 8.7.0 + compileSdk 36 + heavy plugins (google_mobile_ads, sentry_flutter). Gradle daemon download + compile Kotlin/AGP takes 60-80min on fresh runner.
+**Fix**: (1) Set `timeout-minutes: 90`. (2) Use `flutter build apk` thay raw `gradlew` — Flutter CLI handles lifecycle better. (3) Add `actions/cache` for `~/.gradle` to speed up subsequent builds:
+```yaml
+timeout-minutes: 90
+# Cache Gradle
+- uses: actions/cache@v4
+  with:
+    path: |
+      ~/.gradle/caches
+      ~/.gradle/wrapper
+    key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('android/**/*.gradle*') }}
+# Use flutter build apk thay gradlew
+- run: flutter build apk --debug --no-pub
+- run: flutter build apk --release --no-pub
+```
+**Lesson**: Với AGP 8.x + heavy plugins, LUÔN set timeout ≥ 60 phút. Lần đầu build trên runner mới mất 40-80 phút. Các lần sau nhanh hơn nhờ cache.
 
 ### Workflow
+
 - [ ] lib/ được save + restore?
 - [ ] `gradle-wrapper.properties` được save + restore? (flutter create ghi đè)
 - [ ] "Force Gradle X.Y" step dùng đúng version cho AGP hiện tại?
 - [ ] Upload paths bao gồm `build/app/outputs/`?
 - [ ] Token dùng env var, KHÔNG hardcode?
+- [ ] `timeout-minutes` ≥ 60? (AGP 8.x first build chậm)
+- [ ] Có Gradle cache (`actions/cache` cho `~/.gradle`)?
+- [ ] Dùng `flutter build apk` thay raw `gradlew`?
