@@ -164,11 +164,33 @@ path: |
 ```groovy
 // settings.gradle
 id "com.android.application" version "8.7.0" apply false
-id "org.jetbrains.kotlin.android" version "2.0.0" apply false
+id "org.jetbrains.kotlin.android" version "2.2.0" apply false
 // gradle-wrapper.properties
 distributionUrl=...gradle-8.9-all.zip
 ```
 **Lesson**: Khi thêm new Flutter plugin (đặc biệt từ Google), LUÔN check AGP version requirement. Upgrade AGP/Kotlin/Gradle theo bộ, không upgrade từng cái.
+
+#### 33. Kotlin version mismatch with transitive dependencies
+**Symptom**: `Module was compiled with an incompatible version of Kotlin. The binary version of its metadata is 2.2.0, expected version is 2.0.0.`
+**Root cause**: Plugin dependency (e.g. `package_info_plus` 9.x) pulls in `kotlin-stdlib-2.2.0` via Maven, but project's Kotlin compiler is 2.0.0. Kotlin compiler 2.0.0 can only read metadata ≤ 2.1.0.
+**Fix**: Upgrade Kotlin to match the transitive dependency:
+```groovy
+// settings.gradle
+id "org.jetbrains.kotlin.android" version "2.2.0" apply false
+```
+**Lesson**: When upgrading AGP, also check Kotlin version. Transitive deps from new plugins may require newer Kotlin. The error message tells you exact version needed: "metadata is X.Y.Z, expected version is A.B.C" — upgrade Kotlin to ≥ X.Y.Z.
+
+#### 34. NDK version mismatch with native plugins
+**Symptom**: `sqflite_android requires Android NDK 27.0.12077973` / `webview_flutter_android requires Android NDK 27.0.12077973`
+**Root cause**: Flutter plugins with native code (sqflite, webview, etc.) may require specific NDK versions. If `ndkVersion` is not set or set to wrong version, build fails.
+**Fix**: Set `ndkVersion` in `build.gradle`:
+```groovy
+android {
+    ndkVersion "27.0.12077973"  // Match the highest required version
+}
+```
+The error message tells you exact version needed. Use the highest one if multiple plugins require different versions.
+**Lesson**: After adding new native plugins, check if they require specific NDK version. Flutter's `ndkVersion flutter.ndkVersion` may not match — set explicit version instead.
 **Symptom**: `Type mismatch: inferred type is (...) -> Unit but InterfaceName was expected`
 **Root cause**: Java interface `OnKeyPressListener` has one method, but Kotlin SAM conversion fails with wrong lambda signature
 **Fix**: Dùng anonymous object thay vì lambda:
