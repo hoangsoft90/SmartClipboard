@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_limits.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../../services/backup_service.dart';
-import '../../services/cache_sync_service.dart';
 import '../../services/metrics_service.dart';
 import '../../state/providers.dart';
 
@@ -589,7 +588,6 @@ class _ProStatusSection extends ConsumerWidget {
 class _ProActiveSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
     final entitlement = ref.watch(entitlementServiceProvider);
 
     return FutureBuilder<DateTime?>(

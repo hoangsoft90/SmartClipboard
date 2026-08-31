@@ -103,9 +103,6 @@ class SmartClipboardApp extends ConsumerWidget {
       locale: ref.watch(localeProvider),
       initialRoute: AppRoutes.root,
       onGenerateRoute: (settings) {
-        // Deep-link: nếu có shared text trong route args, xử lý tại đây.
-        final sharedText = settings.arguments as String?;
-
         switch (settings.name) {
           case AppRoutes.root:
             return MaterialPageRoute(

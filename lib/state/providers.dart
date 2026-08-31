@@ -179,9 +179,8 @@ final lockControllerProvider = StateProvider<bool>((ref) => false);
 class ClipboardListController
     extends StateNotifier<AsyncValue<List<ClipboardItem>>> {
   final ClipboardRepository _repo;
-  final Ref _ref;
 
-  ClipboardListController(this._repo, this._ref)
+  ClipboardListController(this._repo, [Ref? _])
       : super(const AsyncValue.loading()) {
     reload();
   }

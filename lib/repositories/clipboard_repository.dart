@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:sqflite/sqflite.dart';
 
-import '../core/database/app_database.dart';
 import '../core/utils/content_normalizer.dart';
 import '../models/clipboard_item.dart';
 import '../services/privacy_service.dart';

@@ -7,14 +7,18 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  FLUTTER_VERSION: "3.24.0"
+  FLUTTER_VERSION: "3.29.0"
   JAVA_VERSION: "17"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
 
     steps:
       - name: Checkout repository
@@ -28,13 +32,14 @@ jobs:
           distribution: "temurin"
           java-version: ${{ env.JAVA_VERSION }}
 
+      # FIX 4: Stable cache key based on pubspec.lock (NOT gradle files which change)
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('android/**/*.gradle*', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          key: gradle-${{ runner.os }}-agp870-g89-${{ hashFiles('pubspec.lock') }}
           restore-keys: |
             gradle-${{ runner.os }}-agp870-g89-
             gradle-${{ runner.os }}-
@@ -46,95 +51,17 @@ jobs:
           channel: "stable"
           cache: true
 
-      - name: Flutter doctor
-        run: flutter doctor -v
-
-      - name: Save custom files before flutter create
-        run: |
-          mkdir -p /tmp/custom-backup
-          # Save pubspec files
-          cp pubspec.yaml /tmp/custom-backup/pubspec.yaml
-          cp pubspec.lock /tmp/custom-backup/pubspec.lock || true
-          # Save l10n config (flutter create --overwrite detects it and fails)
-          cp l10n.yaml /tmp/custom-backup/l10n.yaml || true
-          cp -r lib/l10n /tmp/custom-backup/l10n-arb || true
-          cp -r lib/generated /tmp/custom-backup/generated || true
-          # Save lib/ (flutter create --overwrite replaces all Dart files)
-          cp -r lib /tmp/custom-backup/lib
-          # Save test/ (flutter create --overwrite creates default widget_test.dart)
-          cp -r test /tmp/custom-backup/test || true
-          # Save android custom files
-          cp android/app/src/main/AndroidManifest.xml /tmp/custom-backup/AndroidManifest.xml
-          cp -r android/app/src/main/res /tmp/custom-backup/res
-          cp -r android/app/src/main/kotlin /tmp/custom-backup/kotlin
-          cp android/app/build.gradle /tmp/custom-backup/app-build.gradle
-          cp android/build.gradle /tmp/custom-backup/root-build.gradle
-          cp android/settings.gradle /tmp/custom-backup/settings.gradle
-          cp android/gradle.properties /tmp/custom-backup/gradle.properties
-          cp android/gradle/wrapper/gradle-wrapper.properties /tmp/custom-backup/gradle-wrapper.properties
-          echo "All custom files saved"
-
-      - name: Generate Flutter platform scaffolding
-        run: |
-          # Remove l10n files BEFORE flutter create (it detects l10n.yaml
-          # and tries gen-l10n which fails without generate:true in new pubspec)
-          rm -f l10n.yaml
-          rm -rf lib/l10n lib/generated
-          flutter create . \
-            --org com.smartclip \
-            --project-name smart_clipboard \
-            --platforms android \
-            --overwrite
-
-      - name: Restore custom files
-        run: |
-          # Restore pubspec
-          cp /tmp/custom-backup/pubspec.yaml pubspec.yaml
-          cp /tmp/custom-backup/pubspec.lock pubspec.lock || true
-          # Restore l10n config
-          cp /tmp/custom-backup/l10n.yaml l10n.yaml || true
-          # Restore lib/ (CRITICAL - flutter create replaces with counter demo)
-          rm -rf lib
-          cp -r /tmp/custom-backup/lib lib
-          # Restore test/ (flutter create creates default widget_test.dart)
-          rm -rf test
-          cp -r /tmp/custom-backup/test test || true
-          # Restore android custom files
-          cp /tmp/custom-backup/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
-          cp -r /tmp/custom-backup/res/* android/app/src/main/res/
-          cp -r /tmp/custom-backup/kotlin/* android/app/src/main/kotlin/
-          cp /tmp/custom-backup/app-build.gradle android/app/build.gradle
-          cp /tmp/custom-backup/root-build.gradle android/build.gradle
-          cp /tmp/custom-backup/settings.gradle android/settings.gradle
-          cp /tmp/custom-backup/gradle.properties android/gradle.properties
-          cp /tmp/custom-backup/gradle-wrapper.properties android/gradle/wrapper/gradle-wrapper.properties
-          echo "All custom files restored"
-
-      - name: Force Gradle 8.9 (AGP 8.7.0 requires Gradle 8.9+)
-        run: |
-          WRAPPER_PROPS="android/gradle/wrapper/gradle-wrapper.properties"
-          sed -i 's|gradle-[0-9.]*-all.zip|gradle-8.9-all.zip|g' "$WRAPPER_PROPS"
-          sed -i 's|gradle-[0-9.]*-bin.zip|gradle-8.9-bin.zip|g' "$WRAPPER_PROPS"
-          echo "=== Gradle wrapper after fix ==="
-          cat "$WRAPPER_PROPS"
+      # FIX 2: No flutter create — Android files are already committed in git
+      # This eliminates the cache invalidation problem entirely.
 
       - name: Verify critical files
         run: |
           echo "=== pubspec.yaml dependencies ==="
-          grep -E "(sqflite|riverpod|crypto|local_auth)" pubspec.yaml || echo "MISSING DEPS!"
+          grep -E "(sqflite|riverpod|crypto|local_auth|sentry|google_mobile_ads)" pubspec.yaml || echo "MISSING DEPS!"
           echo "=== Gradle wrapper ==="
           cat android/gradle/wrapper/gradle-wrapper.properties
           echo "=== Android files ==="
-          ls -la android/app/build.gradle android/app/src/main/AndroidManifest.xml
-
-      - name: Generate launcher icons
-        run: |
-          if command -v convert &> /dev/null; then
-            chmod +x scripts/generate-icons.sh 2>/dev/null || true
-            ./scripts/generate-icons.sh 2>/dev/null || echo "Icon generation skipped"
-          else
-            echo "ImageMagick not available, using vector icons"
-          fi
+          ls -la android/app/build.gradle android/app/src/main/AndroidManifest.xml android/settings.gradle
 
       - name: Install Flutter dependencies
         run: flutter pub get
@@ -145,11 +72,12 @@ jobs:
       - name: Run Flutter tests
         run: flutter test --no-pub || true
 
+      # FIX 3: Add --info for Gradle output debugging
       - name: Build debug APK
-        run: flutter build apk --debug --no-pub
+        run: flutter build apk --debug --no-pub --info 2>&1 | tail -100
 
       - name: Build release APK
-        run: flutter build apk --release --no-pub
+        run: flutter build apk --release --no-pub --info 2>&1 | tail -100
 
       - name: Find built APKs
         run: |

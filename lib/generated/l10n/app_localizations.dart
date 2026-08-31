@@ -1,13 +1,71 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart' as intl;
 
 import 'app_localizations_en.dart';
 import 'app_localizations_vi.dart';
 
-/// Smart Clipboard localization — simplified generated-style class.
-/// Matches the API of flutter gen-l10n output for easy migration.
-class AppLocalizations {
-  final Locale locale;
-  AppLocalizations(this.locale);
+// ignore_for_file: type=lint
+
+/// Callers can lookup localized strings with an instance of AppLocalizations
+/// returned by `AppLocalizations.of(context)`.
+///
+/// Applications need to include `AppLocalizations.delegate()` in their app's
+/// `localizationDelegates` list, and the locales they support in the app's
+/// `supportedLocales` list. For example:
+///
+/// ```dart
+/// import 'l10n/app_localizations.dart';
+///
+/// return MaterialApp(
+///   localizationsDelegates: AppLocalizations.localizationsDelegates,
+///   supportedLocales: AppLocalizations.supportedLocales,
+///   home: MyApplicationHome(),
+/// );
+/// ```
+///
+/// ## Update pubspec.yaml
+///
+/// Please make sure to update your pubspec.yaml to include the following
+/// packages:
+///
+/// ```yaml
+/// dependencies:
+///   # Internationalization support.
+///   flutter_localizations:
+///     sdk: flutter
+///   intl: any # Use the pinned version from flutter_localizations
+///
+///   # Rest of dependencies
+/// ```
+///
+/// ## iOS Applications
+///
+/// iOS applications define key application metadata, including supported
+/// locales, in an Info.plist file that is built into the application bundle.
+/// To configure the locales supported by your app, you’ll need to edit this
+/// file.
+///
+/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
+/// Then, in the Project Navigator, open the Info.plist file under the Runner
+/// project’s Runner folder.
+///
+/// Next, select the Information Property List item, select Add Item from the
+/// Editor menu, then select Localizations from the pop-up menu.
+///
+/// Select and expand the newly-created Localizations item then, for each
+/// locale your application supports, add a new item and select the locale
+/// you wish to add from the pop-up menu in the Value field. This list should
+/// be consistent with the languages listed in the AppLocalizations.supportedLocales
+/// property.
+abstract class AppLocalizations {
+  AppLocalizations(String locale)
+      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+
+  final String localeName;
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations)!;
@@ -16,237 +74,947 @@ class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  static const List<Locale> supportedLocales = [
-    Locale('en'),
-    Locale('vi'),
+  /// A list of this localizations delegate along with the default localizations
+  /// delegates.
+  ///
+  /// Returns a list of localizations delegates containing this delegate along with
+  /// GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate,
+  /// and GlobalWidgetsLocalizations.delegate.
+  ///
+  /// Additional delegates can be added by appending to this list in
+  /// MaterialApp. This list does not have to be used at all if a custom list
+  /// of delegates is preferred or required.
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+    delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
   ];
 
-  late final Map<String, String> _strings = _loadStrings();
+  /// A list of this localizations delegate's supported locales.
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('vi')
+  ];
 
-  Map<String, String> _loadStrings() {
-    switch (locale.languageCode) {
-      case 'vi':
-        return appStringsVi;
-      case 'en':
-      default:
-        return appStringsEn;
-    }
-  }
+  /// No description provided for @appTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard'**
+  String get appTitle;
 
-  String _t(String key, [Map<String, String>? params]) {
-    var value = _strings[key] ?? key;
-    if (params != null) {
-      for (final entry in params.entries) {
-        value = value.replaceAll('{${entry.key}}', entry.value);
-      }
-    }
-    return value;
-  }
+  /// No description provided for @tabClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get tabClipboard;
 
-  // ---- Navigation ----
-  String get appTitle => _t('appTitle');
-  String get tabClipboard => _t('tabClipboard');
-  String get tabSnippets => _t('tabSnippets');
-  String get tabPlayground => _t('tabPlayground');
-  String get tabSettings => _t('tabSettings');
+  /// No description provided for @tabSnippets.
+  ///
+  /// In en, this message translates to:
+  /// **'Snippet'**
+  String get tabSnippets;
 
-  // ---- Common buttons ----
-  String get btnEnable => _t('btnEnable');
-  String get btnCancel => _t('btnCancel');
-  String get btnSave => _t('btnSave');
-  String get btnCreate => _t('btnCreate');
-  String get btnExport => _t('btnExport');
-  String get btnRestore => _t('btnRestore');
-  String get btnExit => _t('btnExit');
-  String get btnStay => _t('btnStay');
-  String get btnSkip => _t('btnSkip');
-  String get btnLater => _t('btnLater');
-  String get btnCopy => _t('btnCopy');
-  String get btnRename => _t('btnRename');
-  String get btnDelete => _t('btnDelete');
-  String get btnClose => _t('btnClose');
-  String get btnBack => _t('btnBack');
-  String get btnDone => _t('btnDone');
-  String get btnNext => _t('btnNext');
+  /// No description provided for @tabPlayground.
+  ///
+  /// In en, this message translates to:
+  /// **'Playground'**
+  String get tabPlayground;
 
-  // ---- Clipboard History ----
-  String get clipboardHistoryTitle => _t('clipboardHistoryTitle');
-  String get clipboardEmpty => _t('clipboardEmpty');
-  String get clipboardLoadError => _t('clipboardLoadError');
-  String get clipboardCopied => _t('clipboardCopied');
-  String get clipboardSavedToHistory => _t('clipboardSavedToHistory');
-  String get clipboardPaused => _t('clipboardPaused');
-  String get clipboardPauseResumeTooltip => _t('clipboardPauseResumeTooltip');
-  String get clipboardPauseTooltip => _t('clipboardPauseTooltip');
-  String get clipboardPauseSubtitle => _t('clipboardPauseSubtitle');
-  String get clipboardAutoDelete => _t('clipboardAutoDelete');
-  String get clipboardAutoDeleteSubtitle => _t('clipboardAutoDeleteSubtitle');
+  /// No description provided for @tabSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get tabSettings;
 
-  // ---- Popup menu ----
-  String get popupCopyAgain => _t('popupCopyAgain');
-  String get popupSaveAsSnippet => _t('popupSaveAsSnippet');
-  String get popupDeleteAfter24h => _t('popupDeleteAfter24h');
-  String get popupHideFromHistory => _t('popupHideFromHistory');
-  String get popupDeletePermanently => _t('popupDeletePermanently');
-  String get popupPin => _t('popupPin');
-  String get popupUnpin => _t('popupUnpin');
-  String get popupFavorite => _t('popupFavorite');
-  String get popupUnfavorite => _t('popupUnfavorite');
+  /// No description provided for @btnEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get btnEnable;
 
-  // ---- Snippets ----
-  String get snippetsTitle => _t('snippetsTitle');
-  String get snippetsEmpty => _t('snippetsEmpty');
-  String get snippetsNew => _t('snippetsNew');
-  String get snippetNewTitle => _t('snippetNewTitle');
-  String get snippetTitleLabel => _t('snippetTitleLabel');
-  String get snippetTriggerLabel => _t('snippetTriggerLabel');
-  String get snippetTriggerPrefix => _t('snippetTriggerPrefix');
-  String get snippetContentLabel => _t('snippetContentLabel');
-  String get snippetFolderOptional => _t('snippetFolderOptional');
-  String get snippetCreated => _t('snippetCreated');
-  String snippetCreatedWithArchived(int count) =>
-      _t('snippetCreatedWithArchived', {'count': '$count'});
-  String get snippetDeleteTitle => _t('snippetDeleteTitle');
-  String get snippetDiscardTitle => _t('snippetDiscardTitle');
-  String get snippetDiscardContent => _t('snippetDiscardContent');
-  String get snippetEnable => _t('snippetEnable');
-  String get snippetDisable => _t('snippetDisable');
-  String get snippetUsage => _t('snippetUsage');
+  /// No description provided for @btnCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get btnCancel;
 
-  // ---- Folders ----
-  String get foldersTitle => _t('foldersTitle');
-  String get foldersEmpty => _t('foldersEmpty');
-  String get foldersNew => _t('foldersNew');
-  String get foldersFreeLimit => _t('foldersFreeLimit');
-  String get foldersRename => _t('foldersRename');
+  /// No description provided for @btnSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get btnSave;
 
-  // ---- Playground ----
-  String get playgroundTitle => _t('playgroundTitle');
-  String playgroundHintText(String trigger) =>
-      _t('playgroundHintText', {'trigger': trigger});
-  String get playgroundHelperText => _t('playgroundHelperText');
-  String get playgroundNoSnippets => _t('playgroundNoSnippets');
-  String playgroundPrefixDefault(String prefix) =>
-      _t('playgroundPrefixDefault', {'prefix': prefix});
-  String get playgroundKeyboardEnabled => _t('playgroundKeyboardEnabled');
-  String get playgroundKeyboardDisabled => _t('playgroundKeyboardDisabled');
-  String get playgroundKeyboardSubtitle => _t('playgroundKeyboardSubtitle');
-  String get playgroundKeyboardPhase0 => _t('playgroundKeyboardPhase0');
-  String playgroundExpanded(String trigger) =>
-      _t('playgroundExpanded', {'trigger': trigger});
-  String get playgroundCopyResult => _t('playgroundCopyResult');
-  String get playgroundCopied => _t('playgroundCopied');
+  /// No description provided for @btnCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get btnCreate;
 
-  // ---- Settings ----
-  String get settingsTitle => _t('settingsTitle');
-  String get settingsPauseLogging => _t('settingsPauseLogging');
-  String get settingsAutoDelete => _t('settingsAutoDelete');
-  String get settingsBiometricLock => _t('settingsBiometricLock');
-  String get settingsBiometricSubtitle => _t('settingsBiometricSubtitle');
-  String get settingsBiometricNotSupported =>
-      _t('settingsBiometricNotSupported');
-  String get settingsSensitiveDetection => _t('settingsSensitiveDetection');
-  String get settingsSensitiveSubtitle => _t('settingsSensitiveSubtitle');
-  String get settingsExportBackup => _t('settingsExportBackup');
-  String get settingsExportSubtitle => _t('settingsExportSubtitle');
-  String get settingsRestoreBackup => _t('settingsRestoreBackup');
-  String get settingsBackupSection => _t('settingsBackupSection');
-  String get settingsSecuritySection => _t('settingsSecuritySection');
-  String get settingsCaptureSection => _t('settingsCaptureSection');
-  String get settingsStatsSection => _t('settingsStatsSection');
-  String get settingsKeyboardBgColor => _t('settingsKeyboardBgColor');
+  /// No description provided for @btnExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get btnExport;
 
-  // ---- Export/Restore dialogs ----
-  String get exportDialogPassphraseTitle =>
-      _t('exportDialogPassphraseTitle');
-  String get exportDialogPassphraseLabel =>
-      _t('exportDialogPassphraseLabel');
-  String get exportDialogPassphraseWarning =>
-      _t('exportDialogPassphraseWarning');
-  String get exportPassphraseTooShort => _t('exportPassphraseTooShort');
-  String exportSuccess(String path) =>
-      _t('exportSuccess', {'path': path});
-  String get exportFailed => _t('exportFailed');
-  String get exportInProgress => _t('exportInProgress');
+  /// No description provided for @btnRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get btnRestore;
 
-  String get restoreDialogTitle => _t('restoreDialogTitle');
-  String get restoreDialogPathLabel => _t('restoreDialogPathLabel');
-  String get restoreDialogPathHelper => _t('restoreDialogPathHelper');
-  String get restoreDialogPassphraseLabel =>
-      _t('restoreDialogPassphraseLabel');
-  String get restoreDialogWarning => _t('restoreDialogWarning');
-  String get restorePathEmpty => _t('restorePathEmpty');
-  String get restoreSuccess => _t('restoreSuccess');
-  String get restoreFailed => _t('restoreFailed');
-  String get restoreInProgress => _t('restoreInProgress');
+  /// No description provided for @btnExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get btnExit;
 
-  // ---- Stats ----
-  String get statsSnippetsCreated => _t('statsSnippetsCreated');
-  String get statsExpansions => _t('statsExpansions');
-  String get statsClipboardSaved => _t('statsClipboardSaved');
-  String get statsClipboardReused => _t('statsClipboardReused');
-  String get statsPlaygroundExpansions => _t('statsPlaygroundExpansions');
-  String get statsActiveDays => _t('statsActiveDays');
-  String statsPerDay(String value) =>
-      _t('statsPerDay', {'value': value});
+  /// No description provided for @btnStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay'**
+  String get btnStay;
 
-  // ---- High Risk dialog ----
-  String get highRiskTitle => _t('highRiskTitle');
-  String get highRiskContent => _t('highRiskContent');
-  String get highRiskDontSave => _t('highRiskDontSave');
-  String get highRiskSaveAndDelete => _t('highRiskSaveAndDelete');
+  /// No description provided for @btnSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get btnSkip;
 
-  // ---- Share Intent ----
-  String shareReceived(int length) =>
-      _t('shareReceived', {'length': '$length'});
-  String get shareSaveToHistory => _t('shareSaveToHistory');
-  String get shareCreateSnippet => _t('shareCreateSnippet');
+  /// No description provided for @btnLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get btnLater;
 
-  // ---- Onboarding ----
-  String get onboardingTitle1 => _t('onboardingTitle1');
-  String get onboardingSubtitle1 => _t('onboardingSubtitle1');
-  String get onboardingTitle2 => _t('onboardingTitle2');
-  String get onboardingSubtitle2 => _t('onboardingSubtitle2');
-  String get onboardingTitle3 => _t('onboardingTitle3');
-  String get onboardingSubtitle3 => _t('onboardingSubtitle3');
-  String get onboardingTitle4 => _t('onboardingTitle4');
-  String get onboardingSubtitle4 => _t('onboardingSubtitle4');
-  String get onboardingSkipHint => _t('onboardingSkipHint');
-  String get onboardingEnableKeyboard => _t('onboardingEnableKeyboard');
-  String get onboardingGetStarted => _t('onboardingGetStarted');
+  /// No description provided for @btnCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get btnCopy;
 
-  // ---- Lock Gate ----
-  String get lockGateTitle => _t('lockGateTitle');
-  String get lockGateSubtitle => _t('lockGateSubtitle');
+  /// No description provided for @btnRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get btnRename;
 
-  // ---- Pro Upgrade ----
-  String get proUpgradeTitle => _t('proUpgradeTitle');
-  String get proUpgradeSubtitle => _t('proUpgradeSubtitle');
-  String get proUpgradePrice => _t('proUpgradePrice');
+  /// No description provided for @btnDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get btnDelete;
 
-  // ---- Language ----
-  String get appLanguage => _t('appLanguage');
-  String get appLanguageSubtitle => _t('appLanguageSubtitle');
-  String get langVietnamese => _t('langVietnamese');
-  String get langEnglish => _t('langEnglish');
+  /// No description provided for @btnClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get btnClose;
 
-  // ---- Time ago ----
-  String get timeAgoJustNow => _t('timeAgoJustNow');
-  String timeAgoMinutes(int minutes) =>
-      _t('timeAgoMinutes', {'minutes': '$minutes'});
-  String timeAgoHours(int hours) =>
-      _t('timeAgoHours', {'hours': '$hours'});
-  String timeAgoDays(int days) =>
-      _t('timeAgoDays', {'days': '$days'});
+  /// No description provided for @btnBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get btnBack;
 
-  // ---- Search & Filter ----
-  String get searchClipboardHint => _t('searchClipboardHint');
-  String get searchSnippetsHint => _t('searchSnippetsHint');
-  String get filterAll => _t('filterAll');
-  String get filterFavorites => _t('filterFavorites');
-  String get filterPinned => _t('filterPinned');
-  String get filterEnabled => _t('filterEnabled');
-  String get filterDisabled => _t('filterDisabled');
+  /// No description provided for @btnDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get btnDone;
+
+  /// No description provided for @btnNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get btnNext;
+
+  /// No description provided for @clipboardHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard History'**
+  String get clipboardHistoryTitle;
+
+  /// No description provided for @clipboardEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No content yet.\nSwitch to another app and come back to save clipboard.'**
+  String get clipboardEmpty;
+
+  /// No description provided for @clipboardLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load data'**
+  String get clipboardLoadError;
+
+  /// No description provided for @clipboardCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get clipboardCopied;
+
+  /// No description provided for @clipboardSavedToHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to history'**
+  String get clipboardSavedToHistory;
+
+  /// No description provided for @clipboardPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'CLIPBOARD LOGGING PAUSED'**
+  String get clipboardPaused;
+
+  /// No description provided for @clipboardPauseResumeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume clipboard logging'**
+  String get clipboardPauseResumeTooltip;
+
+  /// No description provided for @clipboardPauseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause clipboard logging (Incognito)'**
+  String get clipboardPauseTooltip;
+
+  /// No description provided for @clipboardPauseSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Incognito/Pause Mode — one-tap pause, no background logging'**
+  String get clipboardPauseSubtitle;
+
+  /// No description provided for @clipboardAutoDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-delete history after'**
+  String get clipboardAutoDelete;
+
+  /// No description provided for @clipboardAutoDeleteSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-Expiration Engine (1/7/30 days)'**
+  String get clipboardAutoDeleteSubtitle;
+
+  /// No description provided for @popupCopyAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy again'**
+  String get popupCopyAgain;
+
+  /// No description provided for @popupSaveAsSnippet.
+  ///
+  /// In en, this message translates to:
+  /// **'Save as Snippet'**
+  String get popupSaveAsSnippet;
+
+  /// No description provided for @popupDeleteAfter24h.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete after 24h ⚠️ heuristic'**
+  String get popupDeleteAfter24h;
+
+  /// No description provided for @popupHideFromHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from history'**
+  String get popupHideFromHistory;
+
+  /// No description provided for @popupDeletePermanently.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get popupDeletePermanently;
+
+  /// No description provided for @popupPin.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get popupPin;
+
+  /// No description provided for @popupUnpin.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpin'**
+  String get popupUnpin;
+
+  /// No description provided for @popupFavorite.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite'**
+  String get popupFavorite;
+
+  /// No description provided for @popupUnfavorite.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfavorite'**
+  String get popupUnfavorite;
+
+  /// No description provided for @snippetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Snippets (Text Expander)'**
+  String get snippetsTitle;
+
+  /// No description provided for @snippetsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No snippets yet.\nCreate a snippet first, then come back to try text expansion!'**
+  String get snippetsEmpty;
+
+  /// No description provided for @snippetsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Snippet'**
+  String get snippetsNew;
+
+  /// No description provided for @snippetNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create new snippet'**
+  String get snippetNewTitle;
+
+  /// No description provided for @snippetTitleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Name (e.g. Work email)'**
+  String get snippetTitleLabel;
+
+  /// No description provided for @snippetTriggerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger without spaces (e.g. email)'**
+  String get snippetTriggerLabel;
+
+  /// No description provided for @snippetTriggerPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger prefix'**
+  String get snippetTriggerPrefix;
+
+  /// No description provided for @snippetContentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get snippetContentLabel;
+
+  /// No description provided for @snippetFolderOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder (optional)'**
+  String get snippetFolderOptional;
+
+  /// No description provided for @snippetCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Snippet created'**
+  String get snippetCreated;
+
+  /// No description provided for @snippetCreatedWithArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Snippet created. {count} old snippet(s) hidden due to Free limit — upgrade to Pro to unlock.'**
+  String snippetCreatedWithArchived(Object count);
+
+  /// No description provided for @snippetDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete snippet?'**
+  String get snippetDeleteTitle;
+
+  /// No description provided for @snippetDiscardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit without saving?'**
+  String get snippetDiscardTitle;
+
+  /// No description provided for @snippetDiscardContent.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Exiting will lose them.'**
+  String get snippetDiscardContent;
+
+  /// No description provided for @snippetEnable.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable'**
+  String get snippetEnable;
+
+  /// No description provided for @snippetDisable.
+  ///
+  /// In en, this message translates to:
+  /// **'Disable'**
+  String get snippetDisable;
+
+  /// No description provided for @snippetUsage.
+  ///
+  /// In en, this message translates to:
+  /// **'Usage'**
+  String get snippetUsage;
+
+  /// No description provided for @foldersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Folders'**
+  String get foldersTitle;
+
+  /// No description provided for @foldersEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No folders yet'**
+  String get foldersEmpty;
+
+  /// No description provided for @foldersNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Folder'**
+  String get foldersNew;
+
+  /// No description provided for @foldersFreeLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Free version limit'**
+  String get foldersFreeLimit;
+
+  /// No description provided for @foldersRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename folder'**
+  String get foldersRename;
+
+  /// No description provided for @playgroundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Smart Expander Playground'**
+  String get playgroundTitle;
+
+  /// No description provided for @playgroundHintText.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a trigger (e.g. {trigger}) then press space...'**
+  String playgroundHintText(Object trigger);
+
+  /// No description provided for @playgroundHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Tip: ;;email → outputs ;email (escape). Triggers only expand after Space/Enter/punctuation.'**
+  String get playgroundHelperText;
+
+  /// No description provided for @playgroundNoSnippets.
+  ///
+  /// In en, this message translates to:
+  /// **'No snippets yet. Create snippets in the \"Snippet\" tab first, then come back to try shortcuts!'**
+  String get playgroundNoSnippets;
+
+  /// No description provided for @playgroundPrefixDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default prefix: \"{prefix}\" (Pro: customizable)'**
+  String playgroundPrefixDefault(Object prefix);
+
+  /// No description provided for @playgroundKeyboardEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard keyboard enabled'**
+  String get playgroundKeyboardEnabled;
+
+  /// No description provided for @playgroundKeyboardDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'💡 Enable Smart Clipboard keyboard to use it in all apps!'**
+  String get playgroundKeyboardDisabled;
+
+  /// No description provided for @playgroundKeyboardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'🔧 Feature coming in Phase 1 — currently only available in Playground'**
+  String get playgroundKeyboardSubtitle;
+
+  /// No description provided for @playgroundKeyboardPhase0.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard keyboard not available in Phase 0. Under development!'**
+  String get playgroundKeyboardPhase0;
+
+  /// No description provided for @playgroundExpanded.
+  ///
+  /// In en, this message translates to:
+  /// **'Expanded {trigger}'**
+  String playgroundExpanded(Object trigger);
+
+  /// No description provided for @playgroundCopyResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy result'**
+  String get playgroundCopyResult;
+
+  /// No description provided for @playgroundCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Copied'**
+  String get playgroundCopied;
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsPauseLogging.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause Clipboard History logging'**
+  String get settingsPauseLogging;
+
+  /// No description provided for @settingsAutoDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-delete history after'**
+  String get settingsAutoDelete;
+
+  /// No description provided for @settingsBiometricLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock app with biometrics'**
+  String get settingsBiometricLock;
+
+  /// No description provided for @settingsBiometricSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Fingerprint/Face — Free version'**
+  String get settingsBiometricSubtitle;
+
+  /// No description provided for @settingsBiometricNotSupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Device does not support biometrics or not configured'**
+  String get settingsBiometricNotSupported;
+
+  /// No description provided for @settingsSensitiveDetection.
+  ///
+  /// In en, this message translates to:
+  /// **'Sensitive data detection'**
+  String get settingsSensitiveDetection;
+
+  /// No description provided for @settingsSensitiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ HEURISTIC ONLY (regex + entropy) for SUGGESTIONS — NOT a security guarantee. High entropy could just be a random ID.'**
+  String get settingsSensitiveSubtitle;
+
+  /// No description provided for @settingsExportBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Export encrypted backup (AES-256-GCM)'**
+  String get settingsExportBackup;
+
+  /// No description provided for @settingsExportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Key derived from your passphrase via PBKDF2 (≥100k iterations). Remember your passphrase — no one can restore without it!'**
+  String get settingsExportSubtitle;
+
+  /// No description provided for @settingsRestoreBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from backup file'**
+  String get settingsRestoreBackup;
+
+  /// No description provided for @settingsBackupSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get settingsBackupSection;
+
+  /// No description provided for @settingsSecuritySection.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get settingsSecuritySection;
+
+  /// No description provided for @settingsCaptureSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Logging'**
+  String get settingsCaptureSection;
+
+  /// No description provided for @settingsStatsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Statistics (local only)'**
+  String get settingsStatsSection;
+
+  /// No description provided for @settingsKeyboardBgColor.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard background color'**
+  String get settingsKeyboardBgColor;
+
+  /// No description provided for @exportDialogPassphraseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter passphrase for backup'**
+  String get exportDialogPassphraseTitle;
+
+  /// No description provided for @exportDialogPassphraseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Passphrase (your choice)'**
+  String get exportDialogPassphraseLabel;
+
+  /// No description provided for @exportDialogPassphraseWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption key is derived from this passphrase. FORGETTING PASSPHRASE = CANNOT RESTORE. Salt + nonce are stored in the file.'**
+  String get exportDialogPassphraseWarning;
+
+  /// No description provided for @exportPassphraseTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Passphrase must be at least 8 characters.'**
+  String get exportPassphraseTooShort;
+
+  /// No description provided for @exportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Exported: {path}'**
+  String exportSuccess(Object path);
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Export failed. Please try again.'**
+  String get exportFailed;
+
+  /// No description provided for @exportInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Exporting... Please wait.'**
+  String get exportInProgress;
+
+  /// No description provided for @restoreDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from backup'**
+  String get restoreDialogTitle;
+
+  /// No description provided for @restoreDialogPathLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup file path (.scbak)'**
+  String get restoreDialogPathLabel;
+
+  /// No description provided for @restoreDialogPathHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. /data/user/0/.../files/smart_clipboard_backup_....scbak'**
+  String get restoreDialogPathHelper;
+
+  /// No description provided for @restoreDialogPassphraseLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Passphrase'**
+  String get restoreDialogPassphraseLabel;
+
+  /// No description provided for @restoreDialogWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'⚠️ Restore will REPLACE all current data in the app.'**
+  String get restoreDialogWarning;
+
+  /// No description provided for @restorePathEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter backup file path.'**
+  String get restorePathEmpty;
+
+  /// No description provided for @restoreSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore successful!'**
+  String get restoreSuccess;
+
+  /// No description provided for @restoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore failed. Check file/passphrase.'**
+  String get restoreFailed;
+
+  /// No description provided for @restoreInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring... Do not close this dialog.'**
+  String get restoreInProgress;
+
+  /// No description provided for @statsSnippetsCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Snippets created'**
+  String get statsSnippetsCreated;
+
+  /// No description provided for @statsExpansions.
+  ///
+  /// In en, this message translates to:
+  /// **'Expansions'**
+  String get statsExpansions;
+
+  /// No description provided for @statsClipboardSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard saved'**
+  String get statsClipboardSaved;
+
+  /// No description provided for @statsClipboardReused.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard reused'**
+  String get statsClipboardReused;
+
+  /// No description provided for @statsPlaygroundExpansions.
+  ///
+  /// In en, this message translates to:
+  /// **'Playground expansions'**
+  String get statsPlaygroundExpansions;
+
+  /// No description provided for @statsActiveDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Active days'**
+  String get statsActiveDays;
+
+  /// No description provided for @statsPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Expansions / active day: {value}\n≥ 1 → Text Expander habit formed (Go Phase 1 criteria — spec section 10)'**
+  String statsPerDay(Object value);
+
+  /// No description provided for @highRiskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Content may be sensitive ⚠️'**
+  String get highRiskTitle;
+
+  /// No description provided for @highRiskContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard content looks like OTP / password / API key.\n\nSave to history? If saved, will auto-delete after 24h.\n\n(This detection is heuristic only, not a security guarantee.)'**
+  String get highRiskContent;
+
+  /// No description provided for @highRiskDontSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t save'**
+  String get highRiskDontSave;
+
+  /// No description provided for @highRiskSaveAndDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & delete after 24h'**
+  String get highRiskSaveAndDelete;
+
+  /// No description provided for @shareReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Shared text ({length} characters)'**
+  String shareReceived(Object length);
+
+  /// No description provided for @shareSaveToHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to Clipboard History'**
+  String get shareSaveToHistory;
+
+  /// No description provided for @shareCreateSnippet.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Snippet with trigger'**
+  String get shareCreateSnippet;
+
+  /// No description provided for @onboardingTitle1.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard'**
+  String get onboardingTitle1;
+
+  /// No description provided for @onboardingSubtitle1.
+  ///
+  /// In en, this message translates to:
+  /// **'Save once. Paste anywhere.'**
+  String get onboardingSubtitle1;
+
+  /// No description provided for @onboardingTitle2.
+  ///
+  /// In en, this message translates to:
+  /// **'Text expander everywhere'**
+  String get onboardingTitle2;
+
+  /// No description provided for @onboardingSubtitle2.
+  ///
+  /// In en, this message translates to:
+  /// **'Type ;email → expands to your email. Works in any app!'**
+  String get onboardingSubtitle2;
+
+  /// No description provided for @onboardingTitle3.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy first'**
+  String get onboardingTitle3;
+
+  /// No description provided for @onboardingSubtitle3.
+  ///
+  /// In en, this message translates to:
+  /// **'100% local. No cloud. Your data never leaves your device.'**
+  String get onboardingSubtitle3;
+
+  /// No description provided for @onboardingTitle4.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable keyboard'**
+  String get onboardingTitle4;
+
+  /// No description provided for @onboardingSubtitle4.
+  ///
+  /// In en, this message translates to:
+  /// **'This feature will be available in the next update.'**
+  String get onboardingSubtitle4;
+
+  /// No description provided for @onboardingSkipHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can skip this and come back later.'**
+  String get onboardingSkipHint;
+
+  /// No description provided for @onboardingEnableKeyboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable keyboard (Phase 1)'**
+  String get onboardingEnableKeyboard;
+
+  /// No description provided for @onboardingGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Started'**
+  String get onboardingGetStarted;
+
+  /// No description provided for @lockGateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard is locked'**
+  String get lockGateTitle;
+
+  /// No description provided for @lockGateSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to unlock'**
+  String get lockGateSubtitle;
+
+  /// No description provided for @proUpgradeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard Pro'**
+  String get proUpgradeTitle;
+
+  /// No description provided for @proUpgradeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upgrade to Pro to unlock everything'**
+  String get proUpgradeSubtitle;
+
+  /// No description provided for @proUpgradePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Lifetime purchase'**
+  String get proUpgradePrice;
+
+  /// No description provided for @appLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App language'**
+  String get appLanguage;
+
+  /// No description provided for @appLanguageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose your preferred language'**
+  String get appLanguageSubtitle;
+
+  /// No description provided for @langVietnamese.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietnamese'**
+  String get langVietnamese;
+
+  /// No description provided for @langEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get langEnglish;
+
+  /// No description provided for @timeAgoJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get timeAgoJustNow;
+
+  /// No description provided for @timeAgoMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m ago'**
+  String timeAgoMinutes(Object minutes);
+
+  /// No description provided for @timeAgoHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{hours}h ago'**
+  String timeAgoHours(Object hours);
+
+  /// No description provided for @timeAgoDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{days}d ago'**
+  String timeAgoDays(Object days);
+
+  /// No description provided for @searchClipboardHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search clipboard...'**
+  String get searchClipboardHint;
+
+  /// No description provided for @searchSnippetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search snippets...'**
+  String get searchSnippetsHint;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @filterFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get filterFavorites;
+
+  /// No description provided for @filterPinned.
+  ///
+  /// In en, this message translates to:
+  /// **'Pinned'**
+  String get filterPinned;
+
+  /// No description provided for @filterEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get filterEnabled;
+
+  /// No description provided for @filterDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get filterDisabled;
 }
 
 class _AppLocalizationsDelegate
@@ -254,13 +1022,30 @@ class _AppLocalizationsDelegate
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) =>
-      ['en', 'vi'].contains(locale.languageCode);
+  Future<AppLocalizations> load(Locale locale) {
+    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
+  }
 
   @override
-  Future<AppLocalizations> load(Locale locale) async =>
-      AppLocalizations(locale);
+  bool isSupported(Locale locale) =>
+      <String>['en', 'vi'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
+}
+
+AppLocalizations lookupAppLocalizations(Locale locale) {
+  // Lookup logic when only language code is specified.
+  switch (locale.languageCode) {
+    case 'en':
+      return AppLocalizationsEn();
+    case 'vi':
+      return AppLocalizationsVi();
+  }
+
+  throw FlutterError(
+      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+      'an issue with the localizations generation tool. Please file an issue '
+      'on GitHub with a reproducible sample app and the gen-l10n configuration '
+      'that was used.');
 }

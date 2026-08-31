@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../generated/l10n/app_localizations.dart';
 import '../../models/snippet.dart';
 import '../../state/providers.dart';
-import '../../widgets/save_snippet_dialog.dart';
 import 'folders_screen.dart';
 import 'snippet_edit_screen.dart';
 
