@@ -6,7 +6,7 @@ class AppConfig {
   AppConfig._();
 
   /// Bật/tắt toàn bộ AdMob. false = no ads, no SDK init.
-  static const bool enableAds = true;
+  static const bool enableAds = false;
 
   /// Bật/tắt test ads. true = Google test IDs, false = real IDs.
   static const bool testAds = true;
