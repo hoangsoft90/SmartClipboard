@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Smart Clipboard brand colors -->
-    <color name="ic_launcher_background">#3D5AFE</color>
-    <color name="ic_launcher_foreground">#FFFFFF</color>
-    <color name="smart_blue">#3D5AFE</color>
-    <color name="smart_light_blue">#E8EAF6</color>
-</resources>
