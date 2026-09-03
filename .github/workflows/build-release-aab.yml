@@ -55,7 +55,9 @@ jobs:
       # nên keystore cố định (không đổi giữa các build) và không bao giờ nằm trong repo.
       - name: Restore release keystore from secrets
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/keystore-release.jks
+          # Gradle resolve storeFile relative to the app module (android/app/) —
+          # đặt keystore ở đó, key.properties vẫn nằm ở android/ (rootProject.file).
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/keystore-release.jks
           cat > android/key.properties <<EOF
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -63,7 +65,7 @@ jobs:
           storeFile=keystore-release.jks
           EOF
           # Kiểm tra keystore hợp lệ (lệnh in ra cert sẽ fail nếu pass sai)
-          keytool -list -keystore android/keystore-release.jks -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -alias "${{ secrets.ANDROID_KEY_ALIAS }}" > /dev/null
+          keytool -list -keystore android/app/keystore-release.jks -storepass "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" -alias "${{ secrets.ANDROID_KEY_ALIAS }}" > /dev/null
           echo "Keystore restored and verified"
 
       - name: Build release AAB
