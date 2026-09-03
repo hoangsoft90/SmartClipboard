@@ -84,3 +84,26 @@ Update onboarding text to accurately describe: clipboard data stays on device, n
 - GIVEN user sees onboarding screen
 - WHEN reading privacy claims
 - THEN claims match actual app behavior (AdMob + Sentry present)
+
+---
+
+## 5. Release Signing — plan12 mục 3
+
+### Problem
+`release` buildType uses `signingConfig signingConfigs.debug` → release APK signed with debug keystore, rejected by Play Store.
+
+### Fix
+- Load `android/key.properties` (gitignored) at build time
+- `signingConfigs.release` reads keyAlias/keyPassword/storeFile/storePassword from it
+- `release` buildType: use real keystore when key.properties exists, fallback to debug otherwise (dev machines)
+- Keystore creation + key.properties are MANUAL user steps — agent never touches the private key
+
+### Files
+- `android/app/build.gradle`
+
+### Scenario
+- GIVEN machine has `android/key.properties` pointing at a real keystore
+- WHEN `flutter build apk --release`
+- THEN APK signed with real keystore; `apksigner verify --print-certs` shows real cert, not Android Debug
+- GIVEN dev machine without key.properties
+- THEN build still succeeds using debug signing (fallback)

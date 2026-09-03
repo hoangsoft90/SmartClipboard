@@ -19,3 +19,11 @@
 - [x] Updated `_SecurityWarningPage`: clarified network usage (ads + error reporting only)
 - [x] Updated password field claim: "Bàn phím không đọc/lưu nội dung ô mật khẩu hệ thống..."
 - [x] `dart analyze` clean — no new errors
+
+## Task 5: Release Signing — plan12 mục 3
+- [x] `android/app/build.gradle`: add `keystoreProperties` loading from `android/key.properties` (gitignored)
+- [x] `signingConfigs.release` reads keyAlias/keyPassword/storeFile/storePassword from key.properties
+- [x] `release` buildType: fallback to debug signing when key.properties absent (dev machine), real keystore otherwise
+- [ ] **MANUAL (user, NOT agent):** `keytool -genkey -v -keystore ~/smart-clipboard-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias smart_clipboard`
+- [ ] **MANUAL (user):** create `android/key.properties` with storePassword/keyPassword/keyAlias/storeFile — never commit
+- [ ] Verify: `apksigner verify --print-certs app-release.apk` shows real cert, not Android Debug

@@ -11,7 +11,9 @@
 - Xong: **Task 4 — Privacy claim** (`lib/screens/onboarding/onboarding_screen.dart`): sửa 3 claim cho khớp thực tế AdMob/Sentry (nội dung không rời thiết bị, mạng chỉ cho ads + error reporting, claim password field chính xác hơn).
 - Xong: `dart analyze` toàn bộ file thay đổi — 0 errors.
 - Xong: Code review toàn bộ diff (skill code-review) — 4/4 PASS, fix 1 lỗi cosmetic (line concat trong clipboard_repository.dart).
-- Chưa làm: archive OpenSpec change platform-fixes (chờ quyết định sync specs + archive); release signing (keystore — bước thủ công của user); build APK verify.
+- Xong: **Release signing config** (`android/app/build.gradle`): thêm `signingConfigs.release` đọc từ `android/key.properties` (gitignored), fallback debug khi chưa có key.properties. Keystore thật + key.properties là bước thủ công của user — KHÔNG agent tạo.
+- Xong: Push `9d9ebca` lên main → GH Actions build APK (debug + release).
+- Chưa làm: archive OpenSpec change platform-fixes (chờ quyết định sync specs + archive); user tạo keystore + key.properties thủ công; verify apksigner; build APK verify (đang chạy CI).
 
 ## Trạng thái OpenSpec changes
 - `platform-fixes` — **đang chạy**, 4/4 task hoàn thành, chưa archive.
