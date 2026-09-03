@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,8 +21,6 @@
   p, li { font-size:14px; color:#2a3142; }
   ul { padding-left:22px; }
   li { margin:5px 0; }
-  .lang { text-align:right; font-size:13px; margin-bottom:14px; }
-  .lang a { color:var(--blue); text-decoration:none; font-weight:600; }
   .muted { color:var(--muted); font-size:13px; }
   .updated { text-align:center; color:var(--muted); font-size:13px; margin-top:26px; }
 </style>
@@ -30,60 +28,11 @@
 <body>
 
 <header>
-  <h1>Smart Clipboard &amp; Text Expander — Chính Sách Quyền Riêng Tư</h1>
-  <p>Privacy Policy</p>
+  <h1>Smart Clipboard &amp; Text Expander — Privacy Policy</h1>
 </header>
 
 <main>
-  <div class="lang">
-    <a href="#en">English</a> &nbsp;|&nbsp; <a href="#vi">Tiếng Việt</a>
-  </div>
-
-  <!-- ===================== VIETNAMESE ===================== -->
-  <section id="vi" class="card">
-    <h2>1. Giới thiệu</h2>
-    <p>Chào mừng bạn đến với <strong>Smart Clipboard &amp; Text Expander</strong> (sau đây gọi tắt là "ứng dụng"). Ứng dụng được xây dựng theo nguyên tắc <strong>local-first</strong>: mọi nội dung bạn lưu — lịch sử clipboard, snippet gõ tắt, folder — <strong>chỉ tồn tại trên chính thiết bị của bạn</strong> và không bao giờ được tải lên bất kỳ máy chủ nào của chúng tôi.</p>
-    <p>Chính sách này giải thích loại dữ liệu nào được xử lý, mục đích xử lý và quyền của bạn. Nếu có câu hỏi, hãy liên hệ: <a href="mailto:haibasoftware@gmail.com">haibasoftware@gmail.com</a>.</p>
-
-    <h2>2. Dữ liệu chúng tôi KHÔNG thu thập</h2>
-    <ul>
-      <li><strong>Nội dung clipboard / snippet của bạn:</strong> toàn bộ đều nằm trong cơ sở dữ liệu local (SQLite) trên thiết bị. Ứng dụng <u>không có tài khoản</u>, <u>không đồng bộ cloud</u> và chúng tôi không thể truy cập nội dung đó.</li>
-      <li><strong>Thông tin cá nhân định danh:</strong> không yêu cầu email, số điện thoại, tên hay đăng ký tài khoản khi sử dụng.</li>
-    </ul>
-
-    <h2>3. Dữ liệu bên thứ ba có thể xử lý</h2>
-    <p>Để ứng dụng miễn phí hoạt động và ổn định, chúng tôi tích hợp hai dịch vụ của bên thứ ba:</p>
-    <ul>
-      <li><strong>Quảng cáo — Google AdMob:</strong> ứng dụng hiển thị quảng cáo banner và quảng cáo video (rewarded) giúp mở khoá Pro tạm thời. Google AdMob có thể thu thập dữ liệu như mã nhận dạng quảng cáo (Advertising ID), loại thiết bị và ngôn ngữ để phục vụ quảng cáo theo chính sách của Google. Nội dung clipboard của bạn <u>không bao giờ</u> được dùng để nhắm quảng cáo.</li>
-      <li><strong>Báo cáo lỗi — Sentry:</strong> khi ứng dụng gặp sự cố, chúng tôi nhận báo cáo lỗi kỹ thuật ẩn danh (thông tin crash, phiên bản hệ điều hành, loại thiết bị) để sửa lỗi nhanh hơn. Báo cáo này <u>không chứa</u> nội dung clipboard hay snippet của bạn.</li>
-    </ul>
-
-    <h2>4. Quyền truy cập thiết bị</h2>
-    <ul>
-      <li><strong>Quyền Clipboard (đọc nội dung copy):</strong> bắt buộc cho tính năng cốt lõi "lưu lịch sử clipboard". Việc đọc chỉ xảy ra cục bộ trên thiết bị.</li>
-      <li><strong>Quyền Sinh trắc học (vân tay / khuôn mặt):</strong> tuỳ chọn, chỉ dùng để khoá ứng dụng. Dữ liệu sinh trắc học do hệ điều hành quản lý, ứng dụng không lưu trữ.</li>
-      <li><strong>Quyền Internet:</strong> chỉ cần thiết để hiển thị quảng cáo (AdMob) và gửi báo cáo lỗi (Sentry).</li>
-    </ul>
-
-    <h2>5. Sao lưu &amp; mã hoá</h2>
-    <p>Tính năng <em>Export backup</em> cho phép bạn xuất dữ liệu ra file backup <strong>đã mã hoá AES-256-GCM</strong>, mật khẩu (passphrase) do chính bạn đặt và được băm bằng PBKDF2. Chúng tôi <strong>không lưu passphrase</strong> — nếu bạn quên mật khẩu, không ai (kể cả chúng tôi) có thể khôi phục file backup đó. Bạn có thể xoá mọi dữ liệu bất kỳ lúc nào bằng cách xoá dữ liệu ứng dụng hoặc gỡ cài đặt ứng dụng.</p>
-
-    <h2>6. Trẻ em</h2>
-    <p>Ứng dụng không nhắm đến đối tượng trẻ em dưới 13 tuổi và không cố ý thu thập dữ liệu của trẻ em.</p>
-
-    <h2>7. Quyền của bạn</h2>
-    <p>Vì toàn bộ dữ liệu nằm trên thiết bị của bạn, bạn toàn quyền xem, xuất, sao lưu và xoá. Với dữ liệu do bên thứ ba (AdMob/Sentry) xử lý, bạn có thể đặt lại Advertising ID trong cài đặt hệ thống hoặc tắt quảng cáo cá nhân hoá theo hướng dẫn của Google.</p>
-
-    <h2>8. Thay đổi chính sách</h2>
-    <p>Chúng tôi có thể cập nhật chính sách này khi ứng dụng phát triển. Bản cập nhật sẽ được đăng tại trang này kèm ngày hiệu lực. Việc bạn tiếp tục sử dụng ứng dụng sau khi cập nhật đồng nghĩa với việc chấp nhận bản chính sách mới.</p>
-
-    <h2>9. Liên hệ</h2>
-    <p>Mọi thắc mắc về quyền riêng tư, vui lòng gửi email tới:
-    <a href="mailto:haibasoftware@gmail.com">haibasoftware@gmail.com</a></p>
-  </section>
-
-  <!-- ===================== ENGLISH ===================== -->
-  <section id="en" class="card">
+  <section class="card">
     <h2>1. Overview</h2>
     <p>Welcome to <strong>Smart Clipboard &amp; Text Expander</strong> ("the app"). The app is built <strong>local-first</strong>: everything you store — clipboard history, text snippets, folders — lives <strong>only on your device</strong> and is never uploaded to any server operated by us.</p>
     <p>This policy explains what data is processed, why, and your rights. Questions: <a href="mailto:haibasoftware@gmail.com">haibasoftware@gmail.com</a>.</p>
@@ -95,6 +44,7 @@
     </ul>
 
     <h2>3. Third-party data processing</h2>
+    <p>To keep the app free and reliable, we integrate two third-party services:</p>
     <ul>
       <li><strong>Advertising — Google AdMob:</strong> the app shows banner and rewarded video ads (rewarded ads unlock Pro temporarily). AdMob may collect data such as the Advertising ID, device type and language in line with Google's policies. Your clipboard content is <u>never</u> used for ad targeting.</li>
       <li><strong>Crash reporting — Sentry:</strong> when the app crashes we receive anonymous technical reports (crash info, OS version, device model) to fix issues faster. These reports <u>do not contain</u> your clipboard or snippet content.</li>
