@@ -13,6 +13,10 @@
 - Xong: Code review toàn bộ diff (skill code-review) — 4/4 PASS, fix 1 lỗi cosmetic (line concat trong clipboard_repository.dart).
 - Xong: **Release signing config** (`android/app/build.gradle`): thêm `signingConfigs.release` đọc từ `android/key.properties` (gitignored), fallback debug khi chưa có key.properties. Keystore thật + key.properties là bước thủ công của user — KHÔNG agent tạo.
 - Xong: Push `9d9ebca` lên main → GH Actions build APK (debug + release).
+- Xong: **Workflow `Build Release AAB`** (`.github/workflows/build-release-aab.yml`): trigger push main + workflow_dispatch; restore keystore từ GH secrets → `android/app/keystore-release.jks` + ghi `android/key.properties` → `flutter build appbundle --release` → verify cert không phải debug (fail nếu có "Android Debug") → upload artifact.
+- Xong: Tạo keystore cố định (`/tmp/smart-clipboard-release.jks`, pass 83793900, alias `smart_clipboard`, RSA 2048, validity 10000 ngày) + tạo 4 GH secrets qua GitHub API (ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS).
+- Xong: Fix CI — `storeFile` Gradle resolve tương đối theo app module → keystore phải decode vào `android/app/` (không phải `android/`).
+- Xong: Build AAB CI success (run 33715286364) — cert Owner `CN=Smart Clipboard...`, SHA256 `75:58:34:C2:5C:BE:77:FD:...`, KHÔNG phải Android Debug. → Play Store không còn lỗi "signed in debug mode".
 - Chưa làm: archive OpenSpec change platform-fixes (chờ quyết định sync specs + archive); user tạo keystore + key.properties thủ công; verify apksigner; build APK verify (đang chạy CI).
 
 ## Trạng thái OpenSpec changes
