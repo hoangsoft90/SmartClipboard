@@ -163,7 +163,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
               SettingsScreen(),
             ]),
           ),
-          const BannerAdWidget(),
+          // Pro gate: hide banner when Pro active (plan12 Task 4)
+          Consumer(
+            builder: (context, ref, _) {
+              final isProAsync = ref.watch(isProActiveProvider);
+              final isPro = isProAsync.value ?? false;
+              if (isPro) return const SizedBox.shrink();
+              return const BannerAdWidget();
+            },
+          ),
         ]),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _tab,

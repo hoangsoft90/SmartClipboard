@@ -117,7 +117,7 @@ class _IntroPage extends StatelessWidget {
             leading: const Icon(Icons.offline_bolt),
             title: const Text('100% Local-first'),
             subtitle: const Text(
-                'Không server, không cloud, không gửi nội dung ra ngoài thiết bị.'),
+                'Nội dung clipboard và snippet KHÔNG BAO GIỜ rời khỏi thiết bị của bạn.'),
           ),
           ListTile(
             leading: const Icon(Icons.gavel),
@@ -298,13 +298,17 @@ class _SecurityWarningPage extends StatelessWidget {
             leading: const Icon(Icons.offline_bolt),
             title: const Text('100% Local-first'),
             subtitle: const Text(
-                'Không có quyền Internet, không gửi dữ liệu ra ngoài.'),
+                'Nội dung clipboard/snippet của bạn không bao giờ rời khỏi thiết bị. '
+                'Kết nối mạng chỉ dùng cho quảng cáo (không cá nhân hoá theo nội dung '
+                'bạn copy) và báo lỗi kỹ thuật ẩn danh.'),
           ),
           ListTile(
             leading: const Icon(Icons.lock_outline),
             title: const Text('Không lưu mật khẩu'),
             subtitle: const Text(
-                'Smart Clipboard KHÔNG đọc ô nhập mật khẩu (password field).'),
+                'Bàn phím không đọc/lưu nội dung ô mật khẩu hệ thống. '
+                'Nếu bạn copy một mật khẩu vào clipboard, '
+                'hãy dùng Incognito Mode hoặc xoá thủ công sau khi dùng.'),
           ),
         ],
       ),

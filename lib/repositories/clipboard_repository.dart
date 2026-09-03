@@ -50,11 +50,12 @@ class ClipboardRepository {
         where: 'content_hash = ?', whereArgs: [hash], limit: 1);
     if (existing.isNotEmpty) {
       final id = existing.first['id'] as String;
-      await db.update(
-        'clipboard_items',
-        {'last_used_at': now, 'updated_at': now},
-        where: 'id = ?',
-        whereArgs: [id],
+      // FIX: use rawUpdate for atomic copy_count increment + unarchive
+      // (mục 2.1: IF content_hash đã tồn tại → UPDATE copy_count+1)
+      await db.rawUpdate(
+        'UPDATE clipboard_items SET last_used_at = ?, updated_at = ?, '
+        'copy_count = copy_count + 1, is_archived = 0 WHERE id = ?',
+        [now, now, id],
       );
       final item = ClipboardItem.fromMap((await db.query('clipboard_items',
               where: 'id = ?', whereArgs: [id], limit: 1))

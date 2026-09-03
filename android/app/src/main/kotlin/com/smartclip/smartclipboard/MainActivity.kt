@@ -42,7 +42,10 @@ class MainActivity : FlutterFragmentActivity() {
             if (result.resultCode == Activity.RESULT_OK) {
                 val uri = result.data?.data
                 if (uri != null) {
-                    filePickerResult?.success(uri.toString())
+                    // FIX: copy content:// URI to real file in cacheDir,
+                    // return absolute path — dart:io File() can't read content:// URIs.
+                    val realPath = copyUriToCacheFile(uri)
+                    filePickerResult?.success(realPath)
                 } else {
                     filePickerResult?.success(null)
                 }
@@ -104,6 +107,24 @@ class MainActivity : FlutterFragmentActivity() {
             type = "*/*"
         }
         filePickerLauncher.launch(intent)
+    }
+
+    /**
+     * Read content:// URI via ContentResolver and copy to a temp file in cacheDir.
+     * Returns absolute filesystem path that dart:io File() can read.
+     * cacheDir is auto-cleaned by the OS periodically.
+     */
+    private fun copyUriToCacheFile(uri: android.net.Uri): String? {
+        return try {
+            val inputStream = contentResolver.openInputStream(uri) ?: return null
+            val tempFile = java.io.File(cacheDir, "restore_import_${System.currentTimeMillis()}.scbak")
+            inputStream.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            }
+            tempFile.absolutePath
+        } catch (e: Exception) {
+            null
+        }
     }
 
     // ===========================================================================
