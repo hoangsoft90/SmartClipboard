@@ -37,8 +37,9 @@ android {
         applicationId "com.smartclip.smartclipboard"
         minSdk 23
         targetSdk 36
-        versionCode 1
-        versionName "0.1.0"
+        // version lấy từ pubspec.yaml (version: 0.1.0+2) — 1 nguồn duy nhất
+        versionCode flutter.versionCode
+        versionName flutter.versionName
 
         // networkSecurityConfig + usesCleartextTraffic referenced directly in AndroidManifest.xml
         // Cho phép HTTP cleartext tất cả domain (xem res/xml/network_security_config.xml)
