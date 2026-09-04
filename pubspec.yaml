@@ -20,7 +20,6 @@ dependencies:
   sqflite: ^2.3.2                 # Local SQLite Database (nguồn sự thật duy nhất)
   path_provider: ^2.1.2           # Thư mục lưu trữ cục bộ (DB + snippets_cache.json)
   local_auth: ^2.1.8              # Biometric App Lock (Free P0)
-  in_app_purchase: ^3.1.13        # Pro Lifetime IAP (wire-up ở Phase sau)
   encrypt: ^5.0.3                 # AES-256-GCM cho Backup/Restore
   crypto: ^3.0.3                  # SHA256 content_hash + HMAC cho PBKDF2
   receive_sharing_intent: ^1.4.5  # Share Sheet Integration (fallback P0)
