@@ -123,8 +123,10 @@ void main() {
     });
 
     test('BackupException có message đúng', () {
-      const exception = BackupException('Test error message');
+      const exception =
+          BackupException(BackupErrorCode.decryptFailed, 'Test error message');
       expect(exception.toString(), 'Test error message');
+      expect(exception.code, BackupErrorCode.decryptFailed);
     });
 
     test('Salt ngẫu nhiên mỗi lần export', () {

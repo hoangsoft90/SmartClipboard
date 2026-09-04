@@ -23,11 +23,11 @@ class AuthService {
     }
   }
 
-  Future<bool> authenticate() async {
+  Future<bool> authenticate({String localizedReason = 'Authenticate to open Smart Clipboard'}) async {
     if (!_isSupported) return false;
     try {
       return await _auth.authenticate(
-        localizedReason: 'Xác thực để mở Smart Clipboard',
+        localizedReason: localizedReason,
         options: const AuthenticationOptions(
           biometricOnly: true,
           stickyAuth: true,

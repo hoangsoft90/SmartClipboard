@@ -60,6 +60,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get btnRename => 'Đổi tên';
 
   @override
+  String get btnEdit => 'Sửa';
+
+  @override
   String get btnDelete => 'Xoá';
 
   @override
@@ -109,6 +112,11 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get clipboardAutoDeleteSubtitle =>
       'Auto-Expiration Engine (1/7/30 ngày)';
+
+  @override
+  String clipboardAutoDeleteOption(Object days) {
+    return '$days ngày';
+  }
 
   @override
   String get popupCopyAgain => 'Copy lại';
@@ -508,4 +516,169 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get filterDisabled => 'Đã tắt';
+
+  @override
+  String get snippetEditTitle => 'Sửa snippet';
+
+  @override
+  String get triggerLabel => 'Trigger';
+
+  @override
+  String triggerHelperText(Object trigger) {
+    return 'Gõ ;$trigger + dấu cách để mở rộng';
+  }
+
+  @override
+  String get triggerErrorEmpty => 'Không được để trống';
+
+  @override
+  String get triggerErrorInvalid =>
+      'Trigger chỉ gồm chữ/số/ký hiệu liền mạch (không space, dấu câu)';
+
+  @override
+  String get snippetDeleteConfirm => 'Xoá snippet này? Không thể hoàn tác.';
+
+  @override
+  String get privacyHeuristicHigh =>
+      'Heuristic: văn bản có thể chứa dữ liệu nhạy cảm (OTP/mật khẩu/API key?). Chỉ là dự đoán.';
+
+  @override
+  String get privacyHeuristicLow =>
+      'Heuristic: văn bản trông ngẫu nhiên, có thể nhạy cảm. Chỉ là dự đoán.';
+
+  @override
+  String get onboardingLocalFirstTitle => '100% Local-first';
+
+  @override
+  String get onboardingLocalFirstSubtitle =>
+      'Nội dung clipboard và snippet KHÔNG BAO GIỜ rời khỏi thiết bị của bạn.';
+
+  @override
+  String get onboardingSecurityTitle => 'Cảnh báo bảo mật Android';
+
+  @override
+  String get onboardingSecurityBody =>
+      'Android sẽ hiện cảnh báo bảo mật tiêu chuẩn cho mọi bàn phím: \'Bàn phím này có thể đọc mọi thứ bạn gõ, bao gồm mật khẩu và số thẻ.\'';
+
+  @override
+  String get onboardingSecurityNote =>
+      'Đây là cảnh báo mặc định của Android cho MỌI bàn phím, không riêng gì Smart Clipboard.';
+
+  @override
+  String get onboardingPrivacySubtitle =>
+      'Nội dung clipboard/snippet của bạn không bao giờ rời khỏi thiết bị. Kết nối mạng chỉ dùng cho quảng cáo (không cá nhân hoá theo nội dung bạn copy) và báo lỗi kỹ thuật ẩn danh.';
+
+  @override
+  String get onboardingNoPasswordTitle => 'Không lưu mật khẩu';
+
+  @override
+  String get onboardingNoPasswordSubtitle =>
+      'Bàn phím không đọc/lưu nội dung ô mật khẩu hệ thống. Nếu bạn copy một mật khẩu vào clipboard, hãy dùng Incognito Mode hoặc xoá thủ công sau khi dùng.';
+
+  @override
+  String get onboardingOemTitle => 'Mẹo cho máy Xiaomi / Oppo / Samsung';
+
+  @override
+  String get onboardingOemBody =>
+      'Một số máy Việt Nam (MIUI, ColorOS, One UI) có quản lý pin nghiêm ngặt, có thể làm bàn phím/snippet mới không cập nhật kịp.\n\nKhuyến nghị:\n• Vào Cài đặt > Pin > Tối ưu hoá pin\n• Chọn Smart Clipboard → \"Không giới hạn\" (Không tối ưu)\n• MIUI: thêm app vào danh sách bảo vệ khởi động tự động';
+
+  @override
+  String get onboardingKeyboardEnabledNotActive =>
+      'Đã bật bàn phím! Chạm bên dưới để chuyển sang Smart Clipboard.';
+
+  @override
+  String get onboardingKeyboardActive =>
+      'Smart Clipboard là bàn phím đang hoạt động!';
+
+  @override
+  String get onboardingSwitchKeyboard => 'Chuyển sang Smart Clipboard';
+
+  @override
+  String get playgroundTapToSwitch => 'Chạm để chuyển sang Smart Clipboard';
+
+  @override
+  String get playgroundActiveSubtitle => 'Thử gõ ;email + Space ở Telegram';
+
+  @override
+  String get btnSwitch => 'Chuyển';
+
+  @override
+  String get langSystem => 'Hệ thống';
+
+  @override
+  String get settingsProSection => 'Pro';
+
+  @override
+  String get settingsAppearanceSection => 'Giao diện';
+
+  @override
+  String get themeSystem => 'Theo hệ thống';
+
+  @override
+  String get themeSystemSubtitle => 'Theo cài đặt thiết bị';
+
+  @override
+  String get themeLight => 'Sáng';
+
+  @override
+  String get themeDark => 'Tối';
+
+  @override
+  String get colorWhite => 'Trắng';
+
+  @override
+  String get colorGray => 'Xám';
+
+  @override
+  String get colorBlue => 'Xanh';
+
+  @override
+  String get colorBlack => 'Đen';
+
+  @override
+  String get proActiveTitle => '✨ Pro đang hoạt động';
+
+  @override
+  String proActiveUntil(Object time) {
+    return 'Khả dụng đến $time';
+  }
+
+  @override
+  String get proUnlockTitle => '✨ Mở khoá Pro hôm nay';
+
+  @override
+  String get proUnlockSubtitle =>
+      'Xem một quảng cáo ngắn để mở khoá toàn bộ tính năng Pro trong 24 giờ';
+
+  @override
+  String get btnWatchAd => 'Xem quảng cáo';
+
+  @override
+  String get proUnlockedSnackbar => '✨ Đã mở khoá Pro 24 giờ!';
+
+  @override
+  String get adFailedSnackbar => 'Quảng cáo không tải được. Vui lòng thử lại.';
+
+  @override
+  String get backupErrorWebUnsupported =>
+      'Backup/Restore không khả dụng trên web.';
+
+  @override
+  String get backupErrorFileNotFound => 'File backup không tồn tại.';
+
+  @override
+  String get backupErrorInvalidFormat => 'File backup không đúng định dạng.';
+
+  @override
+  String get backupErrorNotAppBackup => 'Đây không phải file backup của app.';
+
+  @override
+  String get backupErrorInvalidKdf => 'KDF iterations không hợp lệ.';
+
+  @override
+  String get backupErrorDecrypt =>
+      'Sai passphrase hoặc file bị hỏng. Không thể giải mã.';
+
+  @override
+  String get lockGateBiometricReason => 'Xác thực để mở Smart Clipboard';
 }

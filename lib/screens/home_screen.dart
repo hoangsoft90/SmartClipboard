@@ -240,7 +240,7 @@ class _KeyboardEnableBanner extends ConsumerWidget {
           subtitle: Text(
             isDisabled
                 ? l10n.playgroundKeyboardSubtitle
-                : 'Tap to switch to Smart Clipboard',
+                : l10n.playgroundTapToSwitch,
             style: const TextStyle(fontSize: 11),
           ),
           trailing: IconButton(

@@ -25,7 +25,10 @@ class _LockGateState extends ConsumerState<LockGate>
       return;
     }
     setState(() => _authenticating = true);
-    final ok = await ref.read(authServiceProvider).authenticate();
+    final l10n = AppLocalizations.of(context);
+    final ok = await ref
+        .read(authServiceProvider)
+        .authenticate(localizedReason: l10n.lockGateBiometricReason);
     if (!mounted) return;
     setState(() {
       _authenticating = false;

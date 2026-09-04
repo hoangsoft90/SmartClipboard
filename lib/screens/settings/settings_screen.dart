@@ -42,7 +42,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             value: settings.expirationDays,
             items: AppLimits.expirationOptionsDays
                 .map((d) => DropdownMenuItem(
-                    value: d, child: Text('$d ${l10n.clipboardAutoDelete}')))
+                    value: d, child: Text(l10n.clipboardAutoDeleteOption(d))))
                 .toList(),
             onChanged: (d) {
               if (d != null) {
@@ -81,7 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
 
         // ---------------- Pro (Rewarded Ad) ----------------
-        _SectionHeader('Pro'),
+        _SectionHeader(l10n.settingsProSection),
         _ProStatusSection(),
 
         // ---------------- Backup / Restore ----------------
@@ -109,7 +109,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             items: [
               DropdownMenuItem<Locale?>(
                 value: null,
-                child: Text('🌐 System'),
+                child: Text('🌐 ${l10n.langSystem}'),
               ),
               DropdownMenuItem<Locale?>(
                 value: const Locale('vi'),
@@ -127,7 +127,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
 
         // ---------------- Appearance > Theme ----------------
-        _SectionHeader('Appearance'),
+        _SectionHeader(l10n.settingsAppearanceSection),
         _ThemeModePicker(),
 
         // ---------------- PLAN 7 P1-5: Keyboard background color ----------------
@@ -172,7 +172,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }
             return null; // success
           } on BackupException catch (e) {
-            return e.message;
+            return _backupErrorMessage(l10n, e);
           } catch (_) {
             return l10n.exportFailed;
           }
@@ -210,7 +210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             }
             return null; // success
           } on BackupException catch (e) {
-            return e.message;
+            return _backupErrorMessage(l10n, e);
           } catch (_) {
             return l10n.restoreFailed;
           }
@@ -231,25 +231,35 @@ class _KeyboardBgColorPicker extends StatelessWidget {
 
   // PLAN 7 P1-5: Preset colors — no color-picker package needed
   static const presets = [
-    _ColorPreset('#FFFFFF', 'White'),
-    _ColorPreset('#E0E0E0', 'Gray'),
-    _ColorPreset('#D6E4FF', 'Blue'),
-    _ColorPreset('#1C1C1E', 'Black'),
+    '#FFFFFF',
+    '#E0E0E0',
+    '#D6E4FF',
+    '#1C1C1E',
   ];
+
+  String _label(String hex, AppLocalizations l10n) {
+    return switch (hex) {
+      '#FFFFFF' => l10n.colorWhite,
+      '#E0E0E0' => l10n.colorGray,
+      '#D6E4FF' => l10n.colorBlue,
+      _ => l10n.colorBlack,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Wrap(
         spacing: 12,
         runSpacing: 8,
-        children: presets.map((preset) {
-          final selected = currentColor.toUpperCase() == preset.hex.toUpperCase();
-          final color = Color(int.parse('FF${preset.hex.substring(1)}', radix: 16));
+        children: presets.map((hex) {
+          final selected = currentColor.toUpperCase() == hex.toUpperCase();
+          final color = Color(int.parse('FF${hex.substring(1)}', radix: 16));
           final isDark = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255 < 0.5;
           return GestureDetector(
-            onTap: () => onColorSelected(preset.hex),
+            onTap: () => onColorSelected(hex),
             child: Container(
               width: 48,
               height: 48,
@@ -263,7 +273,7 @@ class _KeyboardBgColorPicker extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  preset.label,
+                  _label(hex, l10n),
                   style: TextStyle(
                     fontSize: 9,
                     color: isDark ? Colors.white : Colors.black,
@@ -279,10 +289,16 @@ class _KeyboardBgColorPicker extends StatelessWidget {
   }
 }
 
-class _ColorPreset {
-  final String hex;
-  final String label;
-  const _ColorPreset(this.hex, this.label);
+/// Map BackupErrorCode → chuỗi đã localize (l10n).
+String _backupErrorMessage(AppLocalizations l10n, BackupException e) {
+  return switch (e.code) {
+    BackupErrorCode.webUnsupported => l10n.backupErrorWebUnsupported,
+    BackupErrorCode.fileNotFound => l10n.backupErrorFileNotFound,
+    BackupErrorCode.invalidFormat => l10n.backupErrorInvalidFormat,
+    BackupErrorCode.notAppBackup => l10n.backupErrorNotAppBackup,
+    BackupErrorCode.invalidKdf => l10n.backupErrorInvalidKdf,
+    BackupErrorCode.decryptFailed => l10n.backupErrorDecrypt,
+  };
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -601,11 +617,11 @@ class _ProActiveSection extends ConsumerWidget {
 
         return ListTile(
           leading: const Icon(Icons.workspace_premium),
-          title: Text('✨ Pro Active',
+          title: Text(AppLocalizations.of(context).proActiveTitle,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold)),
-          subtitle: Text('Available until $timeStr'),
+          subtitle: Text(AppLocalizations.of(context).proActiveUntil(timeStr)),
         );
       },
     );
@@ -615,13 +631,14 @@ class _ProActiveSection extends ConsumerWidget {
 class _ProLockedSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       leading: const Icon(Icons.workspace_premium_outlined),
-      title: const Text('✨ Unlock Pro for today'),
-      subtitle: const Text('Watch a short ad to unlock all Pro features for 24 hours'),
+      title: Text(l10n.proUnlockTitle),
+      subtitle: Text(l10n.proUnlockSubtitle),
       trailing: FilledButton.tonal(
         onPressed: () => _watchAd(context, ref),
-        child: const Text('Watch Ad'),
+        child: Text(l10n.btnWatchAd),
       ),
     );
   }
@@ -635,15 +652,17 @@ class _ProLockedSection extends ConsumerWidget {
         await entitlement.unlockFromRewardedAd();
         ref.invalidate(isProActiveProvider);
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('✨ Pro unlocked for 24 hours!')),
+            SnackBar(content: Text(l10n.proUnlockedSnackbar)),
           );
         }
       },
       onFailed: () {
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Ad failed to load. Please try again.')),
+            SnackBar(content: Text(l10n.adFailedSnackbar)),
           );
         }
       },
@@ -658,13 +677,14 @@ class _ThemeModePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentMode = ref.watch(themeModeProvider);
+    final l10n = AppLocalizations.of(context);
 
     return Column(
       children: [
         RadioListTile<ThemeMode>(
           secondary: const Icon(Icons.brightness_auto),
-          title: const Text('System'),
-          subtitle: const Text('Follow device setting'),
+          title: Text(l10n.themeSystem),
+          subtitle: Text(l10n.themeSystemSubtitle),
           value: ThemeMode.system,
           groupValue: currentMode,
           onChanged: (mode) {
@@ -675,7 +695,7 @@ class _ThemeModePicker extends ConsumerWidget {
         ),
         RadioListTile<ThemeMode>(
           secondary: const Icon(Icons.light_mode),
-          title: const Text('Light'),
+          title: Text(l10n.themeLight),
           value: ThemeMode.light,
           groupValue: currentMode,
           onChanged: (mode) {
@@ -686,7 +706,7 @@ class _ThemeModePicker extends ConsumerWidget {
         ),
         RadioListTile<ThemeMode>(
           secondary: const Icon(Icons.dark_mode),
-          title: const Text('Dark'),
+          title: Text(l10n.themeDark),
           value: ThemeMode.dark,
           groupValue: currentMode,
           onChanged: (mode) {

@@ -59,17 +59,17 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
     super.dispose();
   }
 
-  String? _validateTrigger(String? v) {
+  String? _validateTrigger(String? v, AppLocalizations l10n) {
     final t = v?.trim() ?? '';
-    if (t.isEmpty) return 'Không được để trống';
+    if (t.isEmpty) return l10n.triggerErrorEmpty;
     if (RegExp(r'[\s.,!?]').hasMatch(t)) {
-      return 'Trigger chỉ gồm chữ/số/ký hiệu liền mạch (không space, dấu câu)';
+      return l10n.triggerErrorInvalid;
     }
     return null;
   }
 
   Future<void> _save() async {
-    final triggerError = _validateTrigger(_trigger.text);
+    final triggerError = _validateTrigger(_trigger.text, AppLocalizations.of(context));
     if (_content.text.trim().isEmpty || triggerError != null) {
       setState(() {});
       return;
@@ -115,8 +115,7 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.snippetDeleteTitle),
-        content: Text(
-            '${l10n.popupDeletePermanently} snippet này? (${l10n.btnCancel} không thể hoàn tác)'),
+        content: Text(l10n.snippetDeleteConfirm),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -185,7 +184,8 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(_isEditing ? 'Sửa snippet' : l10n.snippetsNew)),
+        appBar: AppBar(
+            title: Text(_isEditing ? l10n.snippetEditTitle : l10n.snippetsNew)),
         body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -198,12 +198,11 @@ class _SnippetEditScreenState extends ConsumerState<SnippetEditScreen> {
             controller: _trigger,
             autofillHints: null,
             decoration: InputDecoration(
-              labelText: 'Trigger',
+              labelText: l10n.triggerLabel,
               prefixText: ';',
-              helperText:
-                  'Gõ ;${_trigger.text.isEmpty ? "trigger" : _trigger.text} + '
-                  'dấu cách để mở rộng',
-              errorText: _validateTrigger(_trigger.text),
+              helperText: l10n.triggerHelperText(
+                  _trigger.text.isEmpty ? 'trigger' : _trigger.text),
+              errorText: _validateTrigger(_trigger.text, l10n),
             ),
             inputFormatters: [
               NoWhitespaceInputFormatter(),

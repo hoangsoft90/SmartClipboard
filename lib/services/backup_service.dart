@@ -33,7 +33,10 @@ class BackupService {
   /// ra file mã hoá trong thư mục Documents. Trả về đường dẫn file để UI hiển thị.
   /// Web: Backup/Restore không khả dụng (dart:io + path_provider).
   Future<String> exportTo(String passphrase) async {
-    if (kIsWeb) throw const BackupException('Backup không khả dụng trên web.');
+    if (kIsWeb) {
+      throw const BackupException(
+          BackupErrorCode.webUnsupported, 'Backup không khả dụng trên web.');
+    }
     final payload = jsonEncode({
       'exported_at': DateTime.now().toUtc().toIso8601String(),
       'folders': await _db.query('folders'),
@@ -74,26 +77,33 @@ class BackupService {
   /// restore thành công (STRICT RULE 13) — làm ở tầng trên cùng transaction
   /// logic của app.
   Future<void> restoreFrom(String path, String passphrase) async {
-    if (kIsWeb) throw const BackupException('Restore không khả dụng trên web.');
+    if (kIsWeb) {
+      throw const BackupException(
+          BackupErrorCode.webUnsupported, 'Restore không khả dụng trên web.');
+    }
     final file = File(path);
     if (!await file.exists()) {
-      throw const BackupException('File backup không tồn tại.');
+      throw const BackupException(
+          BackupErrorCode.fileNotFound, 'File backup không tồn tại.');
     }
 
     Map<String, dynamic> envelope;
     try {
       envelope = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
     } catch (_) {
-      throw const BackupException('File backup không đúng định dạng.');
+      throw const BackupException(
+          BackupErrorCode.invalidFormat, 'File backup không đúng định dạng.');
     }
     if (envelope['format'] != formatId) {
-      throw const BackupException('Đây không phải file backup của app.');
+      throw const BackupException(
+          BackupErrorCode.notAppBackup, 'Đây không phải file backup của app.');
     }
 
     final kdf = envelope['kdf'] as Map<String, dynamic>;
     final iterations = kdf['iterations'] as int;
     if (iterations < 100000) {
-      throw const BackupException('KDF iterations không hợp lệ.');
+      throw const BackupException(
+          BackupErrorCode.invalidKdf, 'KDF iterations không hợp lệ.');
     }
     final salt = base64Decode(kdf['salt'] as String);
     final nonce = base64Decode(envelope['nonce'] as String);
@@ -111,7 +121,7 @@ class BackupService {
       );
     } catch (_) {
       // Sai passphrase hoặc file hỏng → GCM auth fail.
-      throw const BackupException(
+      throw const BackupException(BackupErrorCode.decryptFailed,
           'Sai passphrase hoặc file bị hỏng. Không thể giải mã.');
     }
 
@@ -168,9 +178,20 @@ Uint8List _deriveKeySync(_KeyDerivationParams params) {
   );
 }
 
+/// Mã lỗi backup ổn định để UI map sang chuỗi đã localize (l10n).
+enum BackupErrorCode {
+  webUnsupported,
+  fileNotFound,
+  invalidFormat,
+  notAppBackup,
+  invalidKdf,
+  decryptFailed,
+}
+
 class BackupException implements Exception {
+  final BackupErrorCode code;
   final String message;
-  const BackupException(this.message);
+  const BackupException(this.code, this.message);
   @override
   String toString() => message;
 }

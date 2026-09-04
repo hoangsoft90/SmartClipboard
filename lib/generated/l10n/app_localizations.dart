@@ -200,6 +200,12 @@ abstract class AppLocalizations {
   /// **'Rename'**
   String get btnRename;
 
+  /// No description provided for @btnEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get btnEdit;
+
   /// No description provided for @btnDelete.
   ///
   /// In en, this message translates to:
@@ -295,6 +301,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Auto-Expiration Engine (1/7/30 days)'**
   String get clipboardAutoDeleteSubtitle;
+
+  /// No description provided for @clipboardAutoDeleteOption.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days'**
+  String clipboardAutoDeleteOption(Object days);
 
   /// No description provided for @popupCopyAgain.
   ///
@@ -1015,6 +1027,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Disabled'**
   String get filterDisabled;
+
+  /// No description provided for @snippetEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit snippet'**
+  String get snippetEditTitle;
+
+  /// No description provided for @triggerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger'**
+  String get triggerLabel;
+
+  /// No description provided for @triggerHelperText.
+  ///
+  /// In en, this message translates to:
+  /// **'Type ;{trigger} + space to expand'**
+  String triggerHelperText(Object trigger);
+
+  /// No description provided for @triggerErrorEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot be empty'**
+  String get triggerErrorEmpty;
+
+  /// No description provided for @triggerErrorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Trigger must be letters/numbers/symbols without spaces or punctuation'**
+  String get triggerErrorInvalid;
+
+  /// No description provided for @snippetDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this snippet? This cannot be undone.'**
+  String get snippetDeleteConfirm;
+
+  /// No description provided for @privacyHeuristicHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'Heuristic: text may contain sensitive data (OTP/password/API key?). Prediction only.'**
+  String get privacyHeuristicHigh;
+
+  /// No description provided for @privacyHeuristicLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Heuristic: text looks random, may be sensitive. Prediction only.'**
+  String get privacyHeuristicLow;
+
+  /// No description provided for @onboardingLocalFirstTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'100% Local-first'**
+  String get onboardingLocalFirstTitle;
+
+  /// No description provided for @onboardingLocalFirstSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clipboard and snippet content NEVER leaves your device.'**
+  String get onboardingLocalFirstSubtitle;
+
+  /// No description provided for @onboardingSecurityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Android security warning'**
+  String get onboardingSecurityTitle;
+
+  /// No description provided for @onboardingSecurityBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Android will show a standard security warning for every keyboard: \'This keyboard can read everything you type, including passwords and card numbers.\''**
+  String get onboardingSecurityBody;
+
+  /// No description provided for @onboardingSecurityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This is Android\'s default warning for ALL keyboards, not specific to Smart Clipboard.'**
+  String get onboardingSecurityNote;
+
+  /// No description provided for @onboardingPrivacySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your clipboard/snippet content never leaves your device. Network is only used for ads (not personalized by your copied content) and anonymous error reporting.'**
+  String get onboardingPrivacySubtitle;
+
+  /// No description provided for @onboardingNoPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No password storage'**
+  String get onboardingNoPasswordTitle;
+
+  /// No description provided for @onboardingNoPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The keyboard does not read/save content from system password fields. If you copy a password to the clipboard, use Incognito Mode or delete it manually after use.'**
+  String get onboardingNoPasswordSubtitle;
+
+  /// No description provided for @onboardingOemTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tips for Xiaomi / Oppo / Samsung devices'**
+  String get onboardingOemTitle;
+
+  /// No description provided for @onboardingOemBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Some devices (MIUI, ColorOS, One UI) have strict battery management that may prevent the keyboard/snippets from updating in time.\n\nRecommended:\n• Settings > Battery > Battery optimization\n• Select Smart Clipboard → \"No restrictions\" (No optimization)\n• MIUI: add the app to the auto-start protection list'**
+  String get onboardingOemBody;
+
+  /// No description provided for @onboardingKeyboardEnabledNotActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Keyboard enabled! Tap below to switch to Smart Clipboard.'**
+  String get onboardingKeyboardEnabledNotActive;
+
+  /// No description provided for @onboardingKeyboardActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Clipboard is your active keyboard!'**
+  String get onboardingKeyboardActive;
+
+  /// No description provided for @onboardingSwitchKeyboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch to Smart Clipboard'**
+  String get onboardingSwitchKeyboard;
+
+  /// No description provided for @playgroundTapToSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to switch to Smart Clipboard'**
+  String get playgroundTapToSwitch;
+
+  /// No description provided for @playgroundActiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Try typing ;email + Space in Telegram'**
+  String get playgroundActiveSubtitle;
+
+  /// No description provided for @btnSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch'**
+  String get btnSwitch;
+
+  /// No description provided for @langSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get langSystem;
+
+  /// No description provided for @settingsProSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Pro'**
+  String get settingsProSection;
+
+  /// No description provided for @settingsAppearanceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Appearance'**
+  String get settingsAppearanceSection;
+
+  /// No description provided for @themeSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get themeSystem;
+
+  /// No description provided for @themeSystemSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow device setting'**
+  String get themeSystemSubtitle;
+
+  /// No description provided for @themeLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLight;
+
+  /// No description provided for @themeDark.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDark;
+
+  /// No description provided for @colorWhite.
+  ///
+  /// In en, this message translates to:
+  /// **'White'**
+  String get colorWhite;
+
+  /// No description provided for @colorGray.
+  ///
+  /// In en, this message translates to:
+  /// **'Gray'**
+  String get colorGray;
+
+  /// No description provided for @colorBlue.
+  ///
+  /// In en, this message translates to:
+  /// **'Blue'**
+  String get colorBlue;
+
+  /// No description provided for @colorBlack.
+  ///
+  /// In en, this message translates to:
+  /// **'Black'**
+  String get colorBlack;
+
+  /// No description provided for @proActiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Pro Active'**
+  String get proActiveTitle;
+
+  /// No description provided for @proActiveUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'Available until {time}'**
+  String proActiveUntil(Object time);
+
+  /// No description provided for @proUnlockTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Unlock Pro for today'**
+  String get proUnlockTitle;
+
+  /// No description provided for @proUnlockSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch a short ad to unlock all Pro features for 24 hours'**
+  String get proUnlockSubtitle;
+
+  /// No description provided for @btnWatchAd.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Ad'**
+  String get btnWatchAd;
+
+  /// No description provided for @proUnlockedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'✨ Pro unlocked for 24 hours!'**
+  String get proUnlockedSnackbar;
+
+  /// No description provided for @adFailedSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad failed to load. Please try again.'**
+  String get adFailedSnackbar;
+
+  /// No description provided for @backupErrorWebUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup/Restore is not available on web.'**
+  String get backupErrorWebUnsupported;
+
+  /// No description provided for @backupErrorFileNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup file does not exist.'**
+  String get backupErrorFileNotFound;
+
+  /// No description provided for @backupErrorInvalidFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup file is not in the correct format.'**
+  String get backupErrorInvalidFormat;
+
+  /// No description provided for @backupErrorNotAppBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a backup file from this app.'**
+  String get backupErrorNotAppBackup;
+
+  /// No description provided for @backupErrorInvalidKdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid KDF iterations.'**
+  String get backupErrorInvalidKdf;
+
+  /// No description provided for @backupErrorDecrypt.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong passphrase or corrupted file. Cannot decrypt.'**
+  String get backupErrorDecrypt;
+
+  /// No description provided for @lockGateBiometricReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticate to open Smart Clipboard'**
+  String get lockGateBiometricReason;
 }
 
 class _AppLocalizationsDelegate

@@ -144,8 +144,8 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
               subtitle: Text(
                 switch (activationState) {
                   KeyboardActivationState.disabled => l10n.playgroundKeyboardSubtitle,
-                  KeyboardActivationState.enabledNotActive => 'Tap to switch to Smart Clipboard',
-                  KeyboardActivationState.active => 'Thử gõ ;email + Space ở Telegram',
+                  KeyboardActivationState.enabledNotActive => l10n.playgroundTapToSwitch,
+                  KeyboardActivationState.active => l10n.playgroundActiveSubtitle,
                 },
                 style: const TextStyle(fontSize: 12),
               ),
@@ -163,7 +163,7 @@ class _PlaygroundScreenState extends ConsumerState<PlaygroundScreen> {
                       child: Text(
                         activationState == KeyboardActivationState.disabled
                             ? l10n.btnEnable
-                            : 'Switch',
+                            : l10n.btnSwitch,
                       ),
                     ),
             ),

@@ -213,7 +213,7 @@ class _SnippetTile extends ConsumerWidget {
                 child: Text(snippet.isEnabled
                     ? l10n.snippetDisable
                     : l10n.snippetEnable)),
-            const PopupMenuItem(value: 'edit', child: Text('Edit')),
+            PopupMenuItem(value: 'edit', child: Text(l10n.btnEdit)),
             PopupMenuItem(
                 value: 'delete', child: Text(l10n.btnDelete)),
           ],

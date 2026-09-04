@@ -60,6 +60,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get btnRename => 'Rename';
 
   @override
+  String get btnEdit => 'Edit';
+
+  @override
   String get btnDelete => 'Delete';
 
   @override
@@ -109,6 +112,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get clipboardAutoDeleteSubtitle =>
       'Auto-Expiration Engine (1/7/30 days)';
+
+  @override
+  String clipboardAutoDeleteOption(Object days) {
+    return '$days days';
+  }
 
   @override
   String get popupCopyAgain => 'Copy again';
@@ -507,4 +515,173 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filterDisabled => 'Disabled';
+
+  @override
+  String get snippetEditTitle => 'Edit snippet';
+
+  @override
+  String get triggerLabel => 'Trigger';
+
+  @override
+  String triggerHelperText(Object trigger) {
+    return 'Type ;$trigger + space to expand';
+  }
+
+  @override
+  String get triggerErrorEmpty => 'Cannot be empty';
+
+  @override
+  String get triggerErrorInvalid =>
+      'Trigger must be letters/numbers/symbols without spaces or punctuation';
+
+  @override
+  String get snippetDeleteConfirm =>
+      'Delete this snippet? This cannot be undone.';
+
+  @override
+  String get privacyHeuristicHigh =>
+      'Heuristic: text may contain sensitive data (OTP/password/API key?). Prediction only.';
+
+  @override
+  String get privacyHeuristicLow =>
+      'Heuristic: text looks random, may be sensitive. Prediction only.';
+
+  @override
+  String get onboardingLocalFirstTitle => '100% Local-first';
+
+  @override
+  String get onboardingLocalFirstSubtitle =>
+      'Clipboard and snippet content NEVER leaves your device.';
+
+  @override
+  String get onboardingSecurityTitle => 'Android security warning';
+
+  @override
+  String get onboardingSecurityBody =>
+      'Android will show a standard security warning for every keyboard: \'This keyboard can read everything you type, including passwords and card numbers.\'';
+
+  @override
+  String get onboardingSecurityNote =>
+      'This is Android\'s default warning for ALL keyboards, not specific to Smart Clipboard.';
+
+  @override
+  String get onboardingPrivacySubtitle =>
+      'Your clipboard/snippet content never leaves your device. Network is only used for ads (not personalized by your copied content) and anonymous error reporting.';
+
+  @override
+  String get onboardingNoPasswordTitle => 'No password storage';
+
+  @override
+  String get onboardingNoPasswordSubtitle =>
+      'The keyboard does not read/save content from system password fields. If you copy a password to the clipboard, use Incognito Mode or delete it manually after use.';
+
+  @override
+  String get onboardingOemTitle => 'Tips for Xiaomi / Oppo / Samsung devices';
+
+  @override
+  String get onboardingOemBody =>
+      'Some devices (MIUI, ColorOS, One UI) have strict battery management that may prevent the keyboard/snippets from updating in time.\n\nRecommended:\n• Settings > Battery > Battery optimization\n• Select Smart Clipboard → \"No restrictions\" (No optimization)\n• MIUI: add the app to the auto-start protection list';
+
+  @override
+  String get onboardingKeyboardEnabledNotActive =>
+      'Keyboard enabled! Tap below to switch to Smart Clipboard.';
+
+  @override
+  String get onboardingKeyboardActive =>
+      'Smart Clipboard is your active keyboard!';
+
+  @override
+  String get onboardingSwitchKeyboard => 'Switch to Smart Clipboard';
+
+  @override
+  String get playgroundTapToSwitch => 'Tap to switch to Smart Clipboard';
+
+  @override
+  String get playgroundActiveSubtitle =>
+      'Try typing ;email + Space in Telegram';
+
+  @override
+  String get btnSwitch => 'Switch';
+
+  @override
+  String get langSystem => 'System';
+
+  @override
+  String get settingsProSection => 'Pro';
+
+  @override
+  String get settingsAppearanceSection => 'Appearance';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeSystemSubtitle => 'Follow device setting';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
+  String get colorWhite => 'White';
+
+  @override
+  String get colorGray => 'Gray';
+
+  @override
+  String get colorBlue => 'Blue';
+
+  @override
+  String get colorBlack => 'Black';
+
+  @override
+  String get proActiveTitle => '✨ Pro Active';
+
+  @override
+  String proActiveUntil(Object time) {
+    return 'Available until $time';
+  }
+
+  @override
+  String get proUnlockTitle => '✨ Unlock Pro for today';
+
+  @override
+  String get proUnlockSubtitle =>
+      'Watch a short ad to unlock all Pro features for 24 hours';
+
+  @override
+  String get btnWatchAd => 'Watch Ad';
+
+  @override
+  String get proUnlockedSnackbar => '✨ Pro unlocked for 24 hours!';
+
+  @override
+  String get adFailedSnackbar => 'Ad failed to load. Please try again.';
+
+  @override
+  String get backupErrorWebUnsupported =>
+      'Backup/Restore is not available on web.';
+
+  @override
+  String get backupErrorFileNotFound => 'Backup file does not exist.';
+
+  @override
+  String get backupErrorInvalidFormat =>
+      'Backup file is not in the correct format.';
+
+  @override
+  String get backupErrorNotAppBackup =>
+      'This is not a backup file from this app.';
+
+  @override
+  String get backupErrorInvalidKdf => 'Invalid KDF iterations.';
+
+  @override
+  String get backupErrorDecrypt =>
+      'Wrong passphrase or corrupted file. Cannot decrypt.';
+
+  @override
+  String get lockGateBiometricReason => 'Authenticate to open Smart Clipboard';
 }

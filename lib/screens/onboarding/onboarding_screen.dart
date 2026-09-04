@@ -115,9 +115,8 @@ class _IntroPage extends StatelessWidget {
           const SizedBox(height: 24),
           ListTile(
             leading: const Icon(Icons.offline_bolt),
-            title: const Text('100% Local-first'),
-            subtitle: const Text(
-                'Nội dung clipboard và snippet KHÔNG BAO GIỜ rời khỏi thiết bị của bạn.'),
+            title: Text(l10n.onboardingLocalFirstTitle),
+            subtitle: Text(l10n.onboardingLocalFirstSubtitle),
           ),
           ListTile(
             leading: const Icon(Icons.gavel),
@@ -185,7 +184,7 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Text(
-                  'Keyboard enabled! Tap below to switch to Smart Clipboard.',
+                  l10n.onboardingKeyboardEnabledNotActive,
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 13),
                 ),
@@ -194,12 +193,12 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
           if (isActive)
             Card(
               color: Colors.green,
-              child: const Padding(
-                padding: EdgeInsets.all(12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
                 child: Text(
-                  'Smart Clipboard is your active keyboard!',
+                  l10n.onboardingKeyboardActive,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13),
+                  style: const TextStyle(fontSize: 13),
                 ),
               ),
             ),
@@ -225,7 +224,7 @@ class _KeyboardPageState extends ConsumerState<_KeyboardPage> {
                 KeyboardActivationState.disabled =>
                     l10n.onboardingEnableKeyboard,
                 KeyboardActivationState.enabledNotActive =>
-                    'Switch to Smart Clipboard',
+                    l10n.onboardingSwitchKeyboard,
                 KeyboardActivationState.active =>
                     l10n.playgroundKeyboardEnabled,
               },
@@ -248,6 +247,7 @@ class _SecurityWarningPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -257,7 +257,7 @@ class _SecurityWarningPage extends StatelessWidget {
               size: 96, color: theme.colorScheme.primary),
           const SizedBox(height: 24),
           Text(
-            'Cảnh báo bảo mật Android',
+            l10n.onboardingSecurityTitle,
             style: theme.textTheme.headlineSmall,
             textAlign: TextAlign.center,
           ),
@@ -269,9 +269,7 @@ class _SecurityWarningPage extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    "Android sẽ hiện cảnh báo bảo mật tiêu chuẩn cho mọi "
-                    "bàn phím: 'Bàn phím này có thể đọc mọi thứ bạn gõ, "
-                    "bao gồm mật khẩu và số thẻ.'",
+                    l10n.onboardingSecurityBody,
                     style: TextStyle(
                       color: theme.colorScheme.onErrorContainer,
                       fontSize: 14,
@@ -280,8 +278,7 @@ class _SecurityWarningPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Đây là cảnh báo mặc định của Android cho MỌI IME, '
-                    'không riêng gì Smart Clipboard.',
+                    l10n.onboardingSecurityNote,
                     style: TextStyle(
                       color: theme.colorScheme.onErrorContainer,
                       fontWeight: FontWeight.bold,
@@ -296,19 +293,13 @@ class _SecurityWarningPage extends StatelessWidget {
           const SizedBox(height: 16),
           ListTile(
             leading: const Icon(Icons.offline_bolt),
-            title: const Text('100% Local-first'),
-            subtitle: const Text(
-                'Nội dung clipboard/snippet của bạn không bao giờ rời khỏi thiết bị. '
-                'Kết nối mạng chỉ dùng cho quảng cáo (không cá nhân hoá theo nội dung '
-                'bạn copy) và báo lỗi kỹ thuật ẩn danh.'),
+            title: Text(l10n.onboardingLocalFirstTitle),
+            subtitle: Text(l10n.onboardingPrivacySubtitle),
           ),
           ListTile(
             leading: const Icon(Icons.lock_outline),
-            title: const Text('Không lưu mật khẩu'),
-            subtitle: const Text(
-                'Bàn phím không đọc/lưu nội dung ô mật khẩu hệ thống. '
-                'Nếu bạn copy một mật khẩu vào clipboard, '
-                'hãy dùng Incognito Mode hoặc xoá thủ công sau khi dùng.'),
+            title: Text(l10n.onboardingNoPasswordTitle),
+            subtitle: Text(l10n.onboardingNoPasswordSubtitle),
           ),
         ],
       ),
@@ -330,18 +321,11 @@ class _OemBatteryPage extends StatelessWidget {
           Icon(Icons.battery_saver,
               size: 96, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
-          Text('Mẹo cho máy Xiaomi / Oppo / Samsung',
+          Text(l10n.onboardingOemTitle,
               style: Theme.of(context).textTheme.titleLarge,
               textAlign: TextAlign.center),
           const SizedBox(height: 12),
-          const Text(
-            'Một số máy Việt Nam (MIUI, ColorOS, One UI) có quản lý pin '
-            'nghiêm ngặt, có thể làm bàn phím/snippet mới không cập nhật kịp.\n\n'
-            'Khuyến nghị:\n'
-            '• Vào Cài đặt > Pin > Tối ưu hoá pin\n'
-            '• Chọn Smart Clipboard → "Không giới hạn" (Không tối ưu)\n'
-            '• MIUI: thêm app vào danh sách bảo vệ khởi động tự động',
-          ),
+          Text(l10n.onboardingOemBody),
           const SizedBox(height: 8),
           Text(l10n.onboardingSkipHint,
               style: const TextStyle(fontStyle: FontStyle.italic)),

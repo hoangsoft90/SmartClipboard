@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../generated/l10n/app_localizations.dart';
+
 /// Badge cảnh báo privacy_risk_score (0/1/2).
 ///
 /// ⚠️ STRICT RULE 9 [HEURISTIC BOUNDARY]: tính năng này chỉ là Heuristic/Gợi ý
@@ -14,12 +16,9 @@ class PrivacyRiskBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isHigh = score >= 2;
+    final l10n = AppLocalizations.of(context);
     return Tooltip(
-      message: isHigh
-          ? 'Heuristic: văn bản có thể chứa dữ liệu nhạy cảm '
-              '(OTP/mật khẩu/API key?). Chỉ là dự đoán.'
-          : 'Heuristic: văn bản trông ngẫu nhiên, có thể nhạy cảm. '
-              'Chỉ là dự đoán.',
+      message: isHigh ? l10n.privacyHeuristicHigh : l10n.privacyHeuristicLow,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
